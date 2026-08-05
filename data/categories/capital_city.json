@@ -1,0 +1,19 @@
+{
+  "category_id": "capital_city_fact",
+  "prompt": "What is the capital of France?",
+  "min_length": 3,
+  "max_length": 25,
+  "required_terms": ["paris"],
+  "banned_terms": ["london", "berlin", "madrid", "lyon"],
+  "baseline_examples": [
+    {"text": "The capital of France is Paris.", "approved_by": "qa_lead"},
+    {"text": "Paris is the capital city of France.", "approved_by": "qa_lead"},
+    {"text": "France's capital is Paris.", "approved_by": "qa_lead"},
+    {"text": "The city of Paris serves as the capital of France.", "approved_by": "qa_lead"},
+    {"text": "Paris has been the capital of France for centuries.", "approved_by": "qa_lead"}
+  ],
+  "rejected_examples": [
+    {"text": "The capital of France is Lyon.", "notes": "factually wrong city"},
+    {"text": "Many people mistakenly think it's Paris, but the capital of France is actually Berlin.", "notes": "wrong final answer despite mentioning Paris"}
+  ]
+}

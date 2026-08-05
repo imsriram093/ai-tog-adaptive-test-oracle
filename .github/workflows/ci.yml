@@ -1,0 +1,38 @@
+name: AI-TOG CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test-and-benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install package (sandbox-safe TF-IDF backend, no model hub access needed)
+        run: pip install -e ".[dev]"
+
+      - name: Run unit tests
+        run: pytest tests/ -v
+
+      - name: Run naive-vs-adaptive-oracle benchmark
+        run: python benchmark.py | tee benchmark_results.txt
+
+      - name: Run adaptive threshold / feedback loop demo
+        run: python demo.py | tee demo_results.txt
+
+      - name: Upload benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-evidence-${{ github.sha }}
+          path: |
+            benchmark_results.txt
+            demo_results.txt
+          retention-days: 90

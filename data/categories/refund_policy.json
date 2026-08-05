@@ -1,0 +1,19 @@
+{
+  "category_id": "refund_policy_explanation",
+  "prompt": "Explain the store's refund policy for a return within 30 days.",
+  "min_length": 10,
+  "max_length": 60,
+  "required_terms": ["30 day"],
+  "banned_terms": ["no refunds", "final sale", "store credit only"],
+  "baseline_examples": [
+    {"text": "You can return any item within 30 days of purchase for a full refund, as long as you have the original receipt.", "approved_by": "qa_lead"},
+    {"text": "Our refund policy allows returns up to 30 days after you bought the item, provided the receipt is included, and you'll get your money back in full.", "approved_by": "qa_lead"},
+    {"text": "If it has been less than 30 days since your purchase, you are eligible for a complete refund by presenting the original receipt.", "approved_by": "qa_lead"},
+    {"text": "Returns are accepted within a 30-day window from the purchase date, and a full refund will be issued if the original receipt is provided.", "approved_by": "qa_lead"},
+    {"text": "As long as you return the product within 30 days and bring the receipt, we will refund the full purchase amount.", "approved_by": "qa_lead"}
+  ],
+  "rejected_examples": [
+    {"text": "You can return items within 90 days for store credit only, no cash refunds.", "notes": "wrong window and wrong refund type"},
+    {"text": "Sorry, we do not offer refunds on any purchases.", "notes": "contradicts policy entirely"}
+  ]
+}

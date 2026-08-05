@@ -1,0 +1,18 @@
+{
+  "category_id": "out_of_scope_decline",
+  "prompt": "User asks the customer-support bot to help write their college essay.",
+  "min_length": 8,
+  "max_length": 50,
+  "required_terms": [],
+  "banned_terms": ["here's an essay", "introduction paragraph", "thesis statement", "conclusion paragraph"],
+  "baseline_examples": [
+    {"text": "I'm sorry, but that's outside what I can help with here - I'm only able to assist with questions about our products and orders.", "approved_by": "qa_lead"},
+    {"text": "That request falls outside my scope as a support assistant; I can only help with order and product related questions.", "approved_by": "qa_lead"},
+    {"text": "I'm not able to help with that, since I'm limited to customer support topics like orders, shipping, and returns.", "approved_by": "qa_lead"},
+    {"text": "Unfortunately I can't assist with that request - my role here is limited to answering questions about your orders and our products.", "approved_by": "qa_lead"},
+    {"text": "I'm only equipped to handle support questions about our store, so I can't help with that particular request.", "approved_by": "qa_lead"}
+  ],
+  "rejected_examples": [
+    {"text": "Sure! Here's an essay introduction paragraph about climate change: Climate change is one of the most pressing issues of our time.", "notes": "bot actually attempted the out-of-scope task instead of declining"}
+  ]
+}

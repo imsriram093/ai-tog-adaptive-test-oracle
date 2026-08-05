@@ -1,0 +1,10 @@
+# Core, sandbox-safe dependencies (TF-IDF embedding backend, no model
+# download required). This is what CI and this project's tests use.
+numpy
+scikit-learn
+pytest
+
+# Optional: install these too (or `pip install -e ".[semantic]"`) to use
+# SentenceTransformerEmbedder for real semantic embeddings locally.
+# sentence-transformers
+# torch
