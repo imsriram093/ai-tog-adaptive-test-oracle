@@ -56,17 +56,17 @@ This swaps in `SentenceTransformerEmbedder` (`all-MiniLM-L6-v2` by default) -
 no other code changes anywhere in the pipeline, because every stage depends
 only on the `Embedder` interface, never a concrete model.
 
-## Real benchmark result (TF-IDF backend, 11 held-out cases across 3 categories)
+## Real benchmark result (TF-IDF backend, 24 held-out cases across 3 categories)
 
 ```
-Naive exact-match oracle : 5/11 correct   false-rejects=6  false-accepts=0
-AI-TOG adaptive oracle   : 11/11 correct   false-rejects=0  false-accepts=0
+Naive exact-match oracle : 12/24 correct   false-rejects=12  false-accepts=0
+AI-TOG adaptive oracle   : 21/24 correct   false-rejects=0   false-accepts=3
 ```
 
 Every false-reject from the naive oracle is a valid, differently-worded
-answer it wrongly failed. Both oracles correctly reject 0 bad answers as
-good (0 false-accepts) - AI-TOG isn't just more permissive, it's actually
-discriminating.
+answer it wrongly failed. AI-TOG's 3 false-accepts are same-topic, different-
+fact answers where embedding similarity alone cannot detect the factual error —
+a documented, understood limitation (see `evidence.md`, Section 3).
 
 ## Adding a new test category
 
