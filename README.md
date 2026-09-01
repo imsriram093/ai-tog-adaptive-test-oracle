@@ -24,17 +24,29 @@ of a hand-tuned constant.
 | 3. Oracle engine | `ai_tog/oracle.py` | Multi-signal scoring: semantic similarity + structural validity + invariants |
 | 4. Adaptive threshold | `ai_tog/threshold.py` | Rolling-window, control-chart-style pass/review/fail boundaries + drift detection |
 | 5. Verdict + feedback | `ai_tog/verdict.py` | Final verdict, plus the loop that folds human-approved reviews back into Stages 2 & 4 |
+| Storage | `ai_tog/storage.py` | Persists reference profiles, threshold score history, evaluation audit logs, and review resolutions across process restarts via SQLite; Storage ABC also has an InMemoryStorage implementation for tests. |
 
-`ai_tog/pipeline.py` wires all five together.
+`ai_tog/pipeline.py` wires all stages together.
 
 ## Quickstart
 
 ```bash
 pip install -e .              # sandbox-safe TF-IDF embedding backend, no network needed
-pytest tests/ -v               # 22 unit tests across all five stages
+pytest tests/ -v               # 30 unit tests across all stages and persistence layer
 python benchmark.py            # adaptive oracle vs naive exact-match, on held-out cases
 python demo.py                 # watch the threshold band adapt + drift detection fire
+python demo_persistence.py     # verify learned state durability across process restarts
 ```
+
+### Enabling SQLite persistence across restarts
+
+By default, `build_pipeline(data_dir)` runs purely in-memory with `storage=None`, preserving the exact prior behavior with zero disk side effects. To make learned state durable across process lifecycles, pass a database path or storage backend:
+
+```python
+from ai_tog.pipeline import build_pipeline
+pipeline = build_pipeline("data/categories", storage="ai_tog.db")
+```
+
 
 ### Using real semantic embeddings instead of the TF-IDF fallback
 

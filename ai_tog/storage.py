@@ -185,15 +185,26 @@ class SQLiteStorage(Storage):
       human_label TEXT NOT NULL CHECK (human_label IN ('good','bad')),
       resolved_at TEXT NOT NULL
     );
+
+    CREATE INDEX IF NOT EXISTS idx_threshold_scores_category_id
+      ON threshold_scores(category_id);
+
+    CREATE INDEX IF NOT EXISTS idx_evaluations_category_id
+      ON evaluations(category_id);
     """
 
     def __init__(self, db_path: str | Path = ":memory:"):
         self.db_path = str(db_path)
         if self.db_path != ":memory:":
             Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
+        # check_same_thread=False is a deliberate, scoped choice: this project's
+        # CLI scripts (benchmark.py, demo.py, demo_persistence.py) are single-threaded,
+        # so SQLite's cross-thread connection check is unnecessary overhead here —
+        # NOT a signal that the storage layer is safe for concurrent/multi-threaded use as-is.
         self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._init_db()
+
 
     def _init_db(self) -> None:
         with self._conn:
