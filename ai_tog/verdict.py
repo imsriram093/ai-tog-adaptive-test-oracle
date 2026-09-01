@@ -4,6 +4,7 @@ from enum import Enum
 
 from .oracle import SignalScores
 from .profile import ProfileBuilder, ReferenceProfile
+from .storage import Storage
 from .threshold import AdaptiveThresholdTracker, ThresholdBand
 
 
@@ -21,6 +22,7 @@ class EvaluationResult:
     band: ThresholdBand
     verdict: Verdict
     explanation: str
+    evaluation_id: int | None = None
 
 
 class VerdictAggregator:
@@ -39,8 +41,13 @@ class VerdictAggregator:
     (Stage 4), so the oracle improves across builds instead of staying static.
     """
 
-    def __init__(self, threshold_tracker: AdaptiveThresholdTracker):
+    def __init__(
+        self,
+        threshold_tracker: AdaptiveThresholdTracker,
+        storage: Storage | None = None,
+    ):
         self.tracker = threshold_tracker
+        self.storage = storage
 
     def decide(self, category_id: str, candidate_text: str, signals: SignalScores) -> EvaluationResult:
         band = self.tracker.current_band(category_id)
@@ -62,7 +69,28 @@ class VerdictAggregator:
             verdict = Verdict.FAIL
             explanation = f"score {score:.3f} < review cut {band.review_cut:.3f}"
 
-        return EvaluationResult(category_id, candidate_text, signals, band, verdict, explanation)
+        evaluation_id: int | None = None
+        if self.storage is not None:
+            evaluation_id = self.storage.record_evaluation(
+                category_id=category_id,
+                candidate_text=candidate_text,
+                semantic_similarity=signals.semantic_similarity,
+                structural_valid=signals.structural_valid,
+                invariants_satisfied=signals.invariants_satisfied,
+                composite_score=score,
+                verdict=verdict.value,
+                explanation=explanation,
+            )
+
+        return EvaluationResult(
+            category_id=category_id,
+            candidate_text=candidate_text,
+            signals=signals,
+            band=band,
+            verdict=verdict,
+            explanation=explanation,
+            evaluation_id=evaluation_id,
+        )
 
     def resolve_review(
         self,
@@ -79,7 +107,7 @@ class VerdictAggregator:
         since it is now a confirmed example of what a passing score looks
         like for this category.
 
-        "bad": logged only (via the caller) - deliberately NOT added to the
+        "bad": logged only (via the caller / storage) - deliberately NOT added to the
         profile or the threshold window, so a confirmed-bad answer can never
         drag the "acceptable" region toward itself.
         """
@@ -88,6 +116,13 @@ class VerdictAggregator:
         if human_label not in ("good", "bad"):
             raise ValueError("human_label must be 'good' or 'bad'.")
 
+        if self.storage is not None and result.evaluation_id is not None:
+            self.storage.record_review_resolution(
+                evaluation_id=result.evaluation_id,
+                human_label=human_label,
+            )
+
         if human_label == "good":
             profile_builder.update_incremental(profile, result.candidate_text)
             self.tracker.record_confirmed_good(result.category_id, result.signals.composite_score)
+

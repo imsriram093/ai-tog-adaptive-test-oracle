@@ -4,6 +4,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from .storage import Storage
+
 # Cold-start fallback band, used only until a category has accumulated
 # `min_samples` confirmed-good scores. Deliberately conservative and
 # clearly separated from the adaptive logic below, so it is never mistaken
@@ -37,20 +39,44 @@ class AdaptiveThresholdTracker:
     score can fall before moving from PASS -> REVIEW -> FAIL.
     """
 
-    def __init__(self, window_size: int = 50, pass_z: float = 1.0,
-                 fail_z: float = 3.0, min_samples: int = 5, spread_floor: float = 0.02):
+    def __init__(
+        self,
+        window_size: int = 50,
+        pass_z: float = 1.0,
+        fail_z: float = 3.0,
+        min_samples: int = 5,
+        spread_floor: float = 0.02,
+        storage: Storage | None = None,
+    ):
         self.window_size = window_size
         self.pass_z = pass_z
         self.fail_z = fail_z
         self.min_samples = min_samples
         self.spread_floor = spread_floor
+        self.storage = storage
         self._windows: dict[str, deque[float]] = {}
 
     def seed(self, category_id: str, scores: list[float]) -> None:
         self._windows[category_id] = deque(scores, maxlen=self.window_size)
 
+    def load_from_storage(self, category_id: str) -> bool:
+        """
+        Rebuild rolling window from persisted threshold_scores on startup.
+        Returns True if scores were loaded, False otherwise.
+        """
+        if self.storage is None:
+            return False
+        scores = self.storage.get_threshold_scores(category_id, limit=self.window_size)
+        if scores:
+            self.seed(category_id, scores)
+            return True
+        return False
+
     def record_confirmed_good(self, category_id: str, score: float) -> None:
         self._windows.setdefault(category_id, deque(maxlen=self.window_size)).append(score)
+        if self.storage is not None:
+            self.storage.record_threshold_score(category_id, score)
+
 
     def current_band(self, category_id: str) -> ThresholdBand:
         window = self._windows.get(category_id, [])

@@ -4,3 +4,7 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+*.db
+*.sqlite
+*.sqlite3
+

@@ -27,6 +27,9 @@ jobs:
       - name: Run adaptive threshold / feedback loop demo
         run: python demo.py | tee demo_results.txt
 
+      - name: Run persistence durability demo across process restarts
+        run: python demo_persistence.py --db /tmp/ai_tog_ci.db | tee persistence_results.txt
+
       - name: Upload benchmark evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -35,4 +38,6 @@ jobs:
           path: |
             benchmark_results.txt
             demo_results.txt
+            persistence_results.txt
           retention-days: 90
+

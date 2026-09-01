@@ -6,6 +6,8 @@ import numpy as np
 
 from .baseline import TestCategory
 from .embedding.base import Embedder
+from .storage import Storage
+
 
 
 @dataclass
@@ -37,8 +39,9 @@ class ProfileBuilder:
     resolutions arrive from the verdict aggregator (Stage 5).
     """
 
-    def __init__(self, embedder: Embedder):
+    def __init__(self, embedder: Embedder, storage: Storage | None = None):
         self.embedder = embedder
+        self.storage = storage
 
     def build(self, category: TestCategory) -> ReferenceProfile:
         texts = [ex.text for ex in category.baseline_examples]
@@ -71,11 +74,22 @@ class ProfileBuilder:
         profile.centroid = _normalize(blended)
         profile.n_examples = n + 1
         profile.version += 1
-        profile.history.append(
+        note = (
             f"v{profile.version} incorporated 1 reviewer-approved example "
             f"(n={profile.n_examples}, {_now()})"
         )
+        profile.history.append(note)
+        if self.storage is not None:
+            self.storage.save_profile(
+                category_id=profile.category_id,
+                centroid=profile.centroid,
+                n_examples=profile.n_examples,
+                version=profile.version,
+                updated_at=_now(),
+                note=note,
+            )
         return profile
+
 
     def leave_one_out_seed_scores(self, category: TestCategory) -> list[float]:
         """
