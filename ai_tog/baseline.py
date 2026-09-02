@@ -19,7 +19,10 @@ class TestCategory:
     that category. This is the ground truth Stage 2 turns into a reference
     profile.
     """
+    __test__ = False
+
     category_id: str
+
     prompt: str
     baseline_examples: list[BaselineExample]
     rejected_examples: list[BaselineExample] = field(default_factory=list)
