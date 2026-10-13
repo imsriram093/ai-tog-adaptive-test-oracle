@@ -8,4 +8,10 @@ venv/
 *.sqlite
 *.sqlite3
 all_code_for_report.txt
-
+build/
+dist/
+.DS_Store
+Thumbs.db
+*.log
+.coverage
+htmlcov/

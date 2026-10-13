@@ -246,7 +246,7 @@ of which `Embedder` implementation is plugged in.
 ```bash
 # From a clean environment:
 pip install -e ".[dev]"       # installs numpy, scikit-learn, pytest
-pytest tests/ -v              # 22 unit tests
+pytest tests/ -v              # 30 unit tests
 python benchmark.py           # full 24-case benchmark
 python demo.py                # adaptive threshold trace
 ```
