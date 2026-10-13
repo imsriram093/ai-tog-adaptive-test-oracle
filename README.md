@@ -101,6 +101,42 @@ Drop a new JSON file into `data/categories/`:
 At least 3 baseline examples are required (5+ recommended) so Stage 2 can
 compute a meaningful centroid and spread.
 
+## Interactive Web Dashboard (Viva & Demonstration)
+
+A local, offline-capable dashboard built with Python standard library and vanilla HTML/CSS/JS for viva defense and live demonstration.
+
+### Running the Dashboard
+
+```bash
+python app.py
+```
+Open your browser at **`http://127.0.0.1:8000`**.
+
+### How to Reset State for a Clean Demo
+
+Click the **Reset Demo State** button in the **Audit Log** tab, or run:
+```bash
+curl -X POST http://127.0.0.1:8000/api/reset
+```
+This safely deletes `data/ui_demo.db` and rebuilds the reference profiles from Stage 1 JSON baselines.
+
+### Viva Presets & Verified Outputs
+
+| Preset Group | Case Description | Category | Real Verdict | Real Score | Why / Mechanism |
+|---|---|---|---|---|---|
+| **Valid** | Reordered clauses | `refund_policy_explanation` | **PASS** | 0.539 | Lexical match within policy; score >= pass cut (0.213) |
+| **Valid** | Conversational register | `refund_policy_explanation` | **PASS** | 0.397 | Valid paraphrase; score >= pass cut (0.213) |
+| **Valid** | Extra detail (em dash) | `capital_city_fact` | **PASS** | 0.798 | True fact with elaboration; score >= pass cut (0.382) |
+| **Caught** | Wrong window (90 days) | `refund_policy_explanation` | **FAIL** | 0.016 | Hard invariant: missing '30 day', contains 'store credit only' |
+| **Caught** | Attempted essay task | `out_of_scope_decline` | **FAIL** | 0.000 | Hard invariant: contains banned 'here\'s an essay' |
+| **Caught** | Marseille (Wrong city) | `capital_city_fact` | **FAIL** | 0.479 | Hard invariant: missing required term 'paris' |
+| **Feedback Loop** | Terse paraphrase (9 words) | `refund_policy_explanation` | **REVIEW** | 0.139 | Structural penalty: too short (< 10 words); lands in review zone |
+| **Feedback Loop** | Gift-card restriction | `refund_policy_explanation` | **REVIEW** | 0.179 | Score lands between review cut (0.068) and pass cut (0.213) |
+| **Feedback Loop** | Paris is in Europe | `capital_city_fact` | **REVIEW** | 0.311 | True geographic detail; score lands between 0.133 and 0.382 |
+| **Limitation** | Versailles relocation | `capital_city_fact` | **PASS (False)** | 0.652 | Mentions 'paris'; 'versailles' not in static banned list |
+| **Limitation** | Partial refund of 50% | `refund_policy_explanation` | **PASS (False)** | 0.366 | Mentions '30 days'; '50%' not in static banned list |
+| **Limitation** | Spelled-out 'thirty days' | `refund_policy_explanation` | **FAIL (False)** | 0.053 | Invariant normalizer does not convert number words to digits |
+
 ## What's deliberately out of scope (see project report, Section 3.4)
 
 - Retraining or fine-tuning the AI/ML model embedded in the module under test
@@ -110,3 +146,4 @@ compute a meaningful centroid and spread.
 ## Project team
 
 K Sriram (24BYB0151), Piyush Patani (24BYB0146) — BCSE301L/P Software Engineering, VIT Vellore
+
