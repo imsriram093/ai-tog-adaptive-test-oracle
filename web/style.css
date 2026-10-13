@@ -1343,11 +1343,15 @@ html, body {
 .pipeline-view-layout {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
+  position: relative;
 }
 
 .pipeline-hero-header {
-  margin-bottom: 4px;
+  position: relative;
+  z-index: 10; /* Always sits securely above the 3D stage */
+  margin-bottom: 8px;
+  width: 100%;
 }
 
 .view-heading {
@@ -1364,71 +1368,80 @@ html, body {
 
 .pipeline-interactive-grid {
   display: grid;
-  grid-template-columns: 460px 1fr;
-  gap: 24px;
-  align-items: start;
+  grid-template-columns: minmax(420px, 5fr) 7fr;
+  gap: 28px;
+  align-items: start; /* Aligns state panel top with stack container top */
 }
 
 .iso-stack-container {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
-  padding: 30px 10px 10px 10px;
+  justify-content: flex-start;
+  min-height: clamp(440px, 55vh, 560px);
+  padding-top: 96px; /* Generous clearance so rotated slabs stay in their box */
+  padding-bottom: 24px;
+  padding-left: 16px;
+  padding-right: 16px;
+  gap: 32px;
+  overflow: visible;
 }
 
 .iso-stack {
   position: relative;
-  width: 260px;
+  width: 280px;
   height: 280px;
+  transform-origin: center bottom;
   transform-style: preserve-3d;
-  transform: rotateX(55deg) rotateZ(-30deg);
+  transform: translateY(60px) rotateX(55deg) rotateZ(-30deg);
   transition: transform var(--trans-slow);
 }
 
 .iso-slab {
   position: absolute;
-  width: 260px;
-  height: 100px;
-  background: rgba(18, 23, 21, 0.85);
+  width: 280px;
+  height: 105px;
+  background: var(--ink-900);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-md);
-  padding: 12px 16px;
+  padding: 14px 18px;
   cursor: pointer;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   transform-style: preserve-3d;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
   user-select: none;
 }
 
+/* Base stack spacing: 56px intervals between slabs (11px extra spacing to prevent label collision) */
 .iso-slab:nth-child(1) { transform: translateZ(0px); }
-.iso-slab:nth-child(2) { transform: translateZ(45px); }
-.iso-slab:nth-child(3) { transform: translateZ(90px); }
-.iso-slab:nth-child(4) { transform: translateZ(135px); }
-.iso-slab:nth-child(5) { transform: translateZ(180px); }
+.iso-slab:nth-child(2) { transform: translateZ(56px); }
+.iso-slab:nth-child(3) { transform: translateZ(112px); }
+.iso-slab:nth-child(4) { transform: translateZ(168px); }
+.iso-slab:nth-child(5) { transform: translateZ(224px); }
 
+/* Hover lift capped at +18px */
 .iso-slab:hover {
   background: var(--ink-800);
   border-color: var(--accent);
 }
+.iso-slab:nth-child(1):hover { transform: translateZ(18px); }
+.iso-slab:nth-child(2):hover { transform: translateZ(74px); }
+.iso-slab:nth-child(3):hover { transform: translateZ(130px); }
+.iso-slab:nth-child(4):hover { transform: translateZ(186px); }
+.iso-slab:nth-child(5):hover { transform: translateZ(242px); }
 
-.iso-slab:nth-child(1):hover { transform: translateZ(15px); }
-.iso-slab:nth-child(2):hover { transform: translateZ(60px); }
-.iso-slab:nth-child(3):hover { transform: translateZ(105px); }
-.iso-slab:nth-child(4):hover { transform: translateZ(150px); }
-.iso-slab:nth-child(5):hover { transform: translateZ(195px); }
-
+/* Active/selected lift capped at +30px */
 .iso-slab.active {
   background: var(--ink-800);
   border-color: var(--pass);
   box-shadow: 0 0 25px rgba(95, 211, 165, 0.25);
 }
-
-.iso-slab:nth-child(1).active { transform: translateZ(25px); }
-.iso-slab:nth-child(2).active { transform: translateZ(70px); }
-.iso-slab:nth-child(3).active { transform: translateZ(115px); }
-.iso-slab:nth-child(4).active { transform: translateZ(160px); }
-.iso-slab:nth-child(5).active { transform: translateZ(205px); }
+.iso-slab:nth-child(1).active { transform: translateZ(30px); }
+.iso-slab:nth-child(2).active { transform: translateZ(86px); }
+.iso-slab:nth-child(3).active { transform: translateZ(142px); }
+.iso-slab:nth-child(4).active { transform: translateZ(198px); }
+.iso-slab:nth-child(5).active { transform: translateZ(254px); }
 
 .slab-top {
   display: flex;
@@ -1451,9 +1464,9 @@ html, body {
 }
 
 .slab-face {
-  font-size: 0.7rem;
-  color: var(--mist);
-  line-height: 1.35;
+  font-size: 0.72rem;
+  color: var(--mist); /* Full opacity for WCAG AA contrast */
+  line-height: 1.4;
 }
 
 .feedback-loop-indicator {
@@ -1808,12 +1821,29 @@ html, body {
 .color-fail { color: var(--fail) !important; }
 
 /* Responsive adjustments */
-@media (max-width: 1100px) {
+@media (max-width: 1180px) {
+  .pipeline-interactive-grid {
+    grid-template-columns: minmax(360px, 5fr) 7fr;
+    gap: 20px;
+  }
+  .iso-stack-container {
+    min-height: 420px;
+    padding-top: 72px;
+  }
+  .iso-stack {
+    transform: translateY(40px) rotateX(55deg) rotateZ(-30deg) scale(0.85);
+  }
+}
+
+@media (max-width: 900px) {
   .playground-grid {
     grid-template-columns: 1fr;
   }
   .pipeline-interactive-grid {
     grid-template-columns: 1fr;
+  }
+  .iso-stack-container {
+    padding-top: 30px;
   }
   .audit-tables-grid {
     grid-template-columns: 1fr;
@@ -1842,12 +1872,23 @@ html, body {
   .verdict-card-3d {
     transition: none !important;
   }
+  .iso-stack-container {
+    min-height: auto !important;
+    padding-top: 0 !important;
+  }
   .iso-stack {
     transform: none !important;
+    width: 100% !important;
+    height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
   }
   .iso-slab {
     transform: none !important;
     position: static !important;
-    margin-bottom: 8px;
+    width: 100% !important;
+    height: auto !important;
+    margin-bottom: 8px !important;
   }
 }
