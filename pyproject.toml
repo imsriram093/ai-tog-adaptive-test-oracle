@@ -6,8 +6,17 @@ build-backend = "setuptools.build_meta"
 name = "ai-tog"
 version = "0.1.0"
 description = "Adaptive Test Oracle Generation for AI-Integrated Software Modules"
+readme = "README.md"
 requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "K Sriram (24BYB0151)", email = "imsriram093@gmail.com" },
+    { name = "Piyush Patani (24BYB0146)" },
+]
 dependencies = ["numpy", "scikit-learn"]
+
+[project.urls]
+Homepage = "https://github.com/imsriram093/ai-tog"
 
 [project.optional-dependencies]
 semantic = ["sentence-transformers", "torch"]

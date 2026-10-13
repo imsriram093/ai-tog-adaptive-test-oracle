@@ -7,4 +7,5 @@ venv/
 *.db
 *.sqlite
 *.sqlite3
+all_code_for_report.txt
 
