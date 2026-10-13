@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI-TOG | Adaptive Test Oracle Observatory</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Ambient Canvas for slow drifting particles -->
+  <canvas id="ambientCanvas" class="ambient-canvas"></canvas>
+
+  <!-- Film Noise & Vignette Overlay (inline SVG feTurbulence, no image files) -->
+  <div class="film-grain-overlay" aria-hidden="true"></div>
+  <div class="vignette-overlay" aria-hidden="true"></div>
+
+  <!-- Main Container -->
+  <div class="app-layout">
+    
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-cluster">
+          <div class="logo-mark" aria-hidden="true">
+            <span class="mark-reticle"></span>
+            <span class="mark-dot"></span>
+          </div>
+          <div class="title-cluster">
+            <h1 class="project-title">AI-TOG</h1>
+            <span class="project-subtitle">Adaptive Test Oracle Generation Engine</span>
+          </div>
+        </div>
+        <div class="header-meta">
+          <span class="meta-chip" id="storageChip">
+            <span class="status-pip"></span>
+            <span id="storageLabel">Storage: SQLite (data/ui_demo.db)</span>
+          </span>
+          <span class="meta-chip version-chip">v0.1.0</span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <!-- Navigation Tabs -->
+        <nav class="nav-tabs" role="tablist" aria-label="Main Navigation">
+          <button class="tab-btn active" role="tab" aria-selected="true" data-tab="playground" id="tab-playground">
+            <span class="tab-index">01</span> Playground
+          </button>
+          <button class="tab-btn" role="tab" aria-selected="false" data-tab="pipeline" id="tab-pipeline">
+            <span class="tab-index">02</span> Pipeline
+          </button>
+          <button class="tab-btn" role="tab" aria-selected="false" data-tab="audit" id="tab-audit">
+            <span class="tab-index">03</span> Audit Log
+          </button>
+          <button class="tab-btn" role="tab" aria-selected="false" data-tab="benchmark" id="tab-benchmark">
+            <span class="tab-index">04</span> Benchmark
+          </button>
+        </nav>
+
+        <!-- Theme Toggle -->
+        <button id="themeToggle" class="icon-btn" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">
+          <svg class="sun-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="moon-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Global System Status & Banner -->
+    <div id="systemNotification" class="system-notification hidden" role="status">
+      <span id="notificationMessage"></span>
+      <button class="close-notif-btn" id="closeNotifBtn" aria-label="Dismiss">&times;</button>
+    </div>
+
+    <!-- MAIN VIEW CONTAINER -->
+    <main class="view-viewport">
+
+      <!-- ============================================================ -->
+      <!-- TAB 1: PLAYGROUND                                           -->
+      <!-- ============================================================ -->
+      <section id="view-playground" class="view-panel active" role="tabpanel" aria-labelledby="tab-playground">
+        
+        <div class="playground-grid">
+          <!-- Left Column: Input, Category, Presets -->
+          <div class="panel-column left-pane">
+            
+            <!-- Category & Prompt Card -->
+            <div class="card tilt-card" data-tilt>
+              <div class="card-header">
+                <span class="card-tag">TARGET SYSTEM</span>
+                <h2 class="card-title">Test Category Specification</h2>
+              </div>
+              <div class="card-body">
+                <div class="field-group">
+                  <label for="categorySelect" class="field-label">Category</label>
+                  <select id="categorySelect" class="form-select">
+                    <!-- Populated dynamically -->
+                  </select>
+                </div>
+
+                <div class="category-meta-box">
+                  <div class="meta-row">
+                    <span class="meta-label">Module Prompt:</span>
+                    <span class="meta-val" id="catPromptDisplay">—</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-label">Length Limits:</span>
+                    <span class="meta-val monospace" id="catLengthDisplay">—</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-label">Required Terms:</span>
+                    <span class="meta-val tag-list" id="catRequiredDisplay">—</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-label">Banned Terms:</span>
+                    <span class="meta-val tag-list banned" id="catBannedDisplay">—</span>
+                  </div>
+                  <div class="meta-row highlight-row">
+                    <span class="meta-label">Profile State:</span>
+                    <span class="meta-val monospace" id="catProfileDisplay">v1 (n=5 baseline examples)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Candidate Input Card -->
+            <div class="card tilt-card" data-tilt>
+              <div class="card-header">
+                <span class="card-tag">CANDIDATE OUTPUT UNDER TEST</span>
+                <h2 class="card-title">Input Candidate Text</h2>
+              </div>
+              <div class="card-body">
+                <div class="field-group">
+                  <label for="candidateInput" class="field-label">Output text produced by AI module:</label>
+                  <textarea id="candidateInput" class="form-textarea" rows="4" placeholder="Enter or paste output text to evaluate against adaptive oracle..."></textarea>
+                </div>
+
+                <div class="eval-action-bar">
+                  <button id="evaluateBtn" class="btn btn-primary">
+                    <span class="btn-text">Evaluate Output</span>
+                    <span class="btn-spinner hidden"></span>
+                  </button>
+                  <button id="clearInputBtn" class="btn btn-ghost">Clear</button>
+                </div>
+
+                <!-- Viva / Presets Group -->
+                <div class="presets-section">
+                  <div class="presets-header">
+                    <span class="field-label">Curated Viva Presets (Verified Ground Truth)</span>
+                    <span class="hint-label">Click to load</span>
+                  </div>
+
+                  <div class="preset-group">
+                    <span class="preset-group-title">Valid Paraphrases (Expected: PASS)</span>
+                    <div class="preset-chips">
+                      <button class="preset-chip chip-pass" data-preset="valid-1">
+                        <span class="chip-dot"></span> Reordered clauses (30-day refund)
+                      </button>
+                      <button class="preset-chip chip-pass" data-preset="valid-2">
+                        <span class="chip-dot"></span> Conversational register (30-day window)
+                      </button>
+                      <button class="preset-chip chip-pass" data-preset="valid-3">
+                        <span class="chip-dot"></span> Capital fact with extra detail
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="preset-group">
+                    <span class="preset-group-title">Caught Failures (Expected: FAIL)</span>
+                    <div class="preset-chips">
+                      <button class="preset-chip chip-fail" data-preset="caught-1">
+                        <span class="chip-dot"></span> Wrong window + store credit (Hallucination)
+                      </button>
+                      <button class="preset-chip chip-fail" data-preset="caught-2">
+                        <span class="chip-dot"></span> Attempted out-of-scope essay
+                      </button>
+                      <button class="preset-chip chip-fail" data-preset="caught-3">
+                        <span class="chip-dot"></span> Marseille (Fails required term 'paris')
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="preset-group">
+                    <span class="preset-group-title">Feedback Loop Trigger (Expected: REVIEW)</span>
+                    <div class="preset-chips">
+                      <button class="preset-chip chip-review" data-preset="review-1">
+                        <span class="chip-dot"></span> Terse but correct paraphrase (Short length)
+                      </button>
+                      <button class="preset-chip chip-review" data-preset="review-2">
+                        <span class="chip-dot"></span> Gift-card restriction (Borderline score)
+                      </button>
+                      <button class="preset-chip chip-review" data-preset="review-3">
+                        <span class="chip-dot"></span> Borderline geography ('Paris in Europe')
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="preset-group">
+                    <span class="preset-group-title">Known Documented Limitations</span>
+                    <div class="preset-chips">
+                      <button class="preset-chip chip-limit" data-preset="limit-1">
+                        <span class="chip-dot"></span> Versailles relocation (False Accept)
+                      </button>
+                      <button class="preset-chip chip-limit" data-preset="limit-2">
+                        <span class="chip-dot"></span> Partial 50% refund (False Accept)
+                      </button>
+                      <button class="preset-chip chip-limit" data-preset="limit-3">
+                        <span class="chip-dot"></span> 'thirty days' spelled out (False Reject)
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right Column: 3D Verdict, Stage 3 Scorecard, Stage 4 Depth Gauge -->
+          <div class="panel-column right-pane">
+
+            <!-- 3D Flipping Verdict Banner -->
+            <div class="verdict-flipper-container">
+              <div id="verdictCard3D" class="verdict-card-3d">
+                <!-- Front Side: Standby -->
+                <div class="verdict-face verdict-front">
+                  <div class="standby-content">
+                    <span class="standby-reticle"></span>
+                    <h3 class="standby-title">ORACLE AWAITING INPUT</h3>
+                    <p class="standby-sub">Select a preset or enter candidate text to trigger 5-stage evaluation.</p>
+                  </div>
+                </div>
+                <!-- Back Side: Resolved Verdict -->
+                <div class="verdict-face verdict-back">
+                  <div class="verdict-badge-header">
+                    <span class="verdict-badge-pill" id="verdictBadge">PASS</span>
+                    <span class="verdict-eval-id" id="verdictEvalId">EVAL #—</span>
+                  </div>
+                  <div class="verdict-explanation-box" id="verdictExplanation">
+                    Explanation will appear here.
+                  </div>
+
+                  <!-- Stage 5 Human in the Loop Resolver (Only on REVIEW) -->
+                  <div id="humanReviewWidget" class="human-review-widget hidden">
+                    <div class="review-prompt">
+                      <span class="review-icon">⚠</span>
+                      <span><strong>Stage 5 Human-in-the-Loop Required:</strong> Score landed in ambiguous review zone. Decide verdict:</span>
+                    </div>
+                    <div class="review-actions">
+                      <button id="resolveGoodBtn" class="btn btn-resolve-good">
+                        ✓ Approve as Good (Fold into v2 Profile)
+                      </button>
+                      <button id="resolveBadBtn" class="btn btn-resolve-bad">
+                        ✕ Reject as Bad (Log only)
+                      </button>
+                    </div>
+                    <p class="review-note">Approving folds candidate into reference profile centroid and appends score to threshold rolling window.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stage 4: 3D Stepped Depth Gauge -->
+            <div class="card tilt-card" data-tilt>
+              <div class="card-header">
+                <span class="card-tag">STAGE 4</span>
+                <h2 class="card-title">Adaptive Threshold Depth Gauge</h2>
+                <span class="band-status-chip" id="coldStartChip">Adaptive Band</span>
+              </div>
+              <div class="card-body">
+                <div class="gauge-stats-bar">
+                  <div class="g-stat">
+                    <span class="g-lbl">Center (μ)</span>
+                    <span class="g-val monospace" id="gaugeCenterVal">—</span>
+                  </div>
+                  <div class="g-stat">
+                    <span class="g-lbl">Spread (σ)</span>
+                    <span class="g-val monospace" id="gaugeSpreadVal">—</span>
+                  </div>
+                  <div class="g-stat">
+                    <span class="g-lbl">Pass Cut (μ - 1σ)</span>
+                    <span class="g-val monospace color-pass" id="gaugePassCutVal">—</span>
+                  </div>
+                  <div class="g-stat">
+                    <span class="g-lbl">Review Cut (μ - 3σ)</span>
+                    <span class="g-val monospace color-review" id="gaugeReviewCutVal">—</span>
+                  </div>
+                </div>
+
+                <!-- 3D Perspective Slab Gauge -->
+                <div class="gauge-3d-stage" id="gaugeStage">
+                  <div class="gauge-3d-track">
+                    <!-- Fail Slab -->
+                    <div class="slab slab-fail" title="Fail Zone: composite score < review cut">
+                      <span class="slab-label">FAIL ZONE</span>
+                    </div>
+                    <!-- Review Cut Blade -->
+                    <div class="gauge-blade blade-review" id="bladeReview" title="Review Cut Boundary">
+                      <span class="blade-tag">Review Cut</span>
+                    </div>
+                    <!-- Review Slab -->
+                    <div class="slab slab-review" title="Review Zone: review cut <= composite score < pass cut">
+                      <span class="slab-label">REVIEW ZONE</span>
+                    </div>
+                    <!-- Pass Cut Blade -->
+                    <div class="gauge-blade blade-pass" id="bladePass" title="Pass Cut Boundary">
+                      <span class="blade-tag">Pass Cut</span>
+                    </div>
+                    <!-- Pass Slab -->
+                    <div class="slab slab-pass" title="Pass Zone: composite score >= pass cut">
+                      <span class="slab-label">PASS ZONE</span>
+                    </div>
+
+                    <!-- Floating Score Marker -->
+                    <div class="floating-score-marker" id="scoreMarker">
+                      <div class="marker-pip"></div>
+                      <div class="marker-stem"></div>
+                      <div class="marker-pill" id="markerPill">Score: —</div>
+                      <div class="marker-shadow"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="gauge-legend">
+                  <span>Boundary Formula: <code>Pass Cut = μ - 1.0σ</code>, <code>Review Cut = μ - 3.0σ</code></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Stage 3: Multi-Signal Scorecard -->
+            <div class="card tilt-card" data-tilt>
+              <div class="card-header">
+                <span class="card-tag">STAGE 3</span>
+                <h2 class="card-title">Multi-Signal Scorecard</h2>
+              </div>
+              <div class="card-body">
+                <div class="scorecard-grid">
+
+                  <!-- Signal 1: Semantic Similarity -->
+                  <div class="signal-card">
+                    <div class="signal-top">
+                      <span class="signal-name">1. Semantic Similarity</span>
+                      <span class="signal-score monospace" id="sigSemanticScore">—</span>
+                    </div>
+                    <div class="meter-rail">
+                      <div class="meter-bar" id="sigSemanticBar" style="width: 0%;"></div>
+                    </div>
+                    <span class="signal-sub">Cosine similarity against Stage 2 Centroid</span>
+                  </div>
+
+                  <!-- Signal 2: Structural Validity -->
+                  <div class="signal-card">
+                    <div class="signal-top">
+                      <span class="signal-name">2. Structural Validity</span>
+                      <span class="status-badge" id="sigStructuralBadge">—</span>
+                    </div>
+                    <div class="signal-detail" id="sigStructuralDetail">Length bounds: min — max —</div>
+                    <div class="penalty-tag" id="sigStructuralPenalty">Penalty: -0.15 if invalid</div>
+                  </div>
+
+                  <!-- Signal 3: Domain Invariants -->
+                  <div class="signal-card">
+                    <div class="signal-top">
+                      <span class="signal-name">3. Domain Invariants</span>
+                      <span class="status-badge" id="sigInvariantBadge">—</span>
+                    </div>
+                    <div class="signal-detail" id="sigInvariantDetail">Required & Banned terms check</div>
+                    <div class="penalty-tag" id="sigInvariantPenalty">Penalty: -0.25 if violated (or hard fail)</div>
+                  </div>
+
+                </div>
+
+                <!-- Violations Box -->
+                <div id="violationsContainer" class="violations-box hidden">
+                  <div class="violations-title">Active Violations Detected:</div>
+                  <ul id="violationsList" class="violations-list"></ul>
+                </div>
+
+                <!-- Composite Score Summary -->
+                <div class="composite-summary-bar">
+                  <span class="comp-label">Composite Score:</span>
+                  <span class="comp-val monospace" id="sigCompositeScore">—</span>
+                  <span class="comp-formula monospace" id="sigCompositeFormula">score = semantic - penalties</span>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- TAB 2: PIPELINE 5-STAGE EXPLORER                            -->
+      <!-- ============================================================ -->
+      <section id="view-pipeline" class="view-panel" role="tabpanel" aria-labelledby="tab-pipeline">
+        <div class="pipeline-view-layout">
+          
+          <div class="pipeline-hero-header">
+            <span class="card-tag">SYSTEM ARCHITECTURE</span>
+            <h2 class="view-heading">Five-Stage Adaptive Test Oracle Lifecycle</h2>
+            <p class="view-sub">Click any stage slab to inspect its live state and mathematical transformation.</p>
+          </div>
+
+          <div class="pipeline-interactive-grid">
+            
+            <!-- Isometric 3D Stack of Stages -->
+            <div class="iso-stack-container">
+              <div class="iso-stack" id="isoStack">
+                
+                <div class="iso-slab" data-stage="1" id="stageSlab1">
+                  <div class="slab-top">
+                    <span class="slab-num">01</span>
+                    <span class="slab-title">Baseline Examples</span>
+                  </div>
+                  <div class="slab-face">Curated known-good answers from QA (Stage 1)</div>
+                </div>
+
+                <div class="iso-slab" data-stage="2" id="stageSlab2">
+                  <div class="slab-top">
+                    <span class="slab-num">02</span>
+                    <span class="slab-title">Reference Profile</span>
+                  </div>
+                  <div class="slab-face">Embedding Centroid + Domain Invariants (Stage 2)</div>
+                </div>
+
+                <div class="iso-slab" data-stage="3" id="stageSlab3">
+                  <div class="slab-top">
+                    <span class="slab-num">03</span>
+                    <span class="slab-title">Oracle Scoring</span>
+                  </div>
+                  <div class="slab-face">Semantic + Structural + Invariant Signals (Stage 3)</div>
+                </div>
+
+                <div class="iso-slab" data-stage="4" id="stageSlab4">
+                  <div class="slab-top">
+                    <span class="slab-num">04</span>
+                    <span class="slab-title">Adaptive Threshold</span>
+                  </div>
+                  <div class="slab-face">Rolling Window Control-Chart Bounds μ ± zσ (Stage 4)</div>
+                </div>
+
+                <div class="iso-slab active" data-stage="5" id="stageSlab5">
+                  <div class="slab-top">
+                    <span class="slab-num">05</span>
+                    <span class="slab-title">Verdict & Feedback</span>
+                  </div>
+                  <div class="slab-face">Pass / Review / Fail + Human-in-the-Loop Loop (Stage 5)</div>
+                </div>
+
+              </div>
+
+              <!-- Animated Feedback Loop Arc -->
+              <div class="feedback-loop-indicator">
+                <div class="loop-arrow-pulse"></div>
+                <span>Stage 5 Closed Feedback Loop updates Stage 2 Centroid & Stage 4 Window</span>
+              </div>
+            </div>
+
+            <!-- Stage Detail Inspector Panel -->
+            <div class="card stage-detail-card">
+              <div class="card-header">
+                <span class="card-tag" id="stageInspectorTag">STAGE 5 DETAILED STATE</span>
+                <h3 class="card-title" id="stageInspectorTitle">Verdict Aggregation & Closed Loop</h3>
+              </div>
+              <div class="card-body">
+                <p id="stageInspectorDesc" class="stage-desc-text">
+                  Turns multi-signal scores into one of three verdicts. When a human reviewer resolves a REVIEW as 'good', it is folded back into both the Reference Profile and Adaptive Threshold.
+                </p>
+
+                <div class="stage-json-viewer">
+                  <div class="json-header">
+                    <span>Active Runtime State (Category: <strong id="stageJsonCatLabel">capital_city_fact</strong>)</span>
+                    <button class="btn btn-ghost btn-sm" id="copyStageJsonBtn">Copy JSON</button>
+                  </div>
+                  <pre><code id="stageJsonCode" class="monospace">{ /* Live Stage JSON */ }</code></pre>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- TAB 3: AUDIT LOG & DURABILITY                               -->
+      <!-- ============================================================ -->
+      <section id="view-audit" class="view-panel" role="tabpanel" aria-labelledby="tab-audit">
+        <div class="audit-view-layout">
+          
+          <div class="audit-hero-header">
+            <div>
+              <span class="card-tag">PERSISTENCE AUDIT TRAIL</span>
+              <h2 class="view-heading">SQLite Durability & Evaluation Audit Logs</h2>
+              <p class="view-sub">Durable evaluation logs and human review resolutions persisted in SQLite across process restarts.</p>
+            </div>
+            <div class="audit-actions">
+              <button class="btn btn-secondary" id="refreshAuditBtn">Refresh Logs</button>
+              <button class="btn btn-danger" id="resetDemoBtn">Reset Demo State</button>
+            </div>
+          </div>
+
+          <div class="audit-tables-grid">
+            
+            <!-- Table 1: Evaluations Audit Log -->
+            <div class="card audit-table-card">
+              <div class="card-header">
+                <h3 class="card-title">Recent Evaluations (<span id="evalCount">0</span>)</h3>
+              </div>
+              <div class="table-scroller">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Category</th>
+                      <th>Candidate Text</th>
+                      <th>Score</th>
+                      <th>Verdict</th>
+                      <th>Evaluated At</th>
+                    </tr>
+                  </thead>
+                  <tbody id="evaluationsTableBody">
+                    <tr><td colspan="6" class="table-empty">No evaluations logged yet.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Table 2: Review Resolutions -->
+            <div class="card audit-table-card">
+              <div class="card-header">
+                <h3 class="card-title">Review Resolutions (<span id="resCount">0</span>)</h3>
+              </div>
+              <div class="table-scroller">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Res ID</th>
+                      <th>Eval ID</th>
+                      <th>Human Decision</th>
+                      <th>Resolved At</th>
+                    </tr>
+                  </thead>
+                  <tbody id="resolutionsTableBody">
+                    <tr><td colspan="4" class="table-empty">No review resolutions yet.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Table 3: Profile Version History -->
+            <div class="card audit-table-card full-span">
+              <div class="card-header">
+                <h3 class="card-title">Profile Evolution History Trail</h3>
+              </div>
+              <div class="table-scroller">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Category</th>
+                      <th>Version</th>
+                      <th>Note / Milestone</th>
+                      <th>Recorded At</th>
+                    </tr>
+                  </thead>
+                  <tbody id="historyTableBody">
+                    <tr><td colspan="4" class="table-empty">No history recorded yet.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- TAB 4: BENCHMARK & TEST SUITE                               -->
+      <!-- ============================================================ -->
+      <section id="view-benchmark" class="view-panel" role="tabpanel" aria-labelledby="tab-benchmark">
+        <div class="benchmark-view-layout">
+          
+          <div class="benchmark-hero-header">
+            <div>
+              <span class="card-tag">EMPIRICAL BENCHMARK (24 HELD-OUT CASES)</span>
+              <h2 class="view-heading">Adaptive Oracle vs. Naive Exact-Match</h2>
+              <p class="view-sub">Computed live from <code>benchmark.py</code> across 3 categories with human ground truth labels.</p>
+            </div>
+          </div>
+
+          <!-- Comparison Metrics Cards -->
+          <div class="benchmark-cards-grid">
+            
+            <!-- Naive Oracle Card -->
+            <div class="card bench-stat-card card-naive">
+              <div class="bench-card-header">
+                <span class="bench-tag">CONVENTIONAL APPROACH</span>
+                <h3>Naive Exact-Match Oracle</h3>
+              </div>
+              <div class="bench-big-stat">
+                <span class="stat-number monospace" id="benchNaiveAccuracy">50.0%</span>
+                <span class="stat-label" id="benchNaiveCorrect">12 / 24 Correct</span>
+              </div>
+              <div class="bench-stat-bars">
+                <div class="bench-row">
+                  <span>False Rejects (Valid rejected):</span>
+                  <strong class="color-fail monospace" id="benchNaiveFR">12</strong>
+                </div>
+                <div class="bench-row">
+                  <span>False Accepts (Hallucinations accepted):</span>
+                  <strong class="monospace" id="benchNaiveFA">0</strong>
+                </div>
+              </div>
+              <p class="bench-note">Fails every valid paraphrase because wording deviates from exact golden baseline string.</p>
+            </div>
+
+            <!-- AI-TOG Oracle Card -->
+            <div class="card bench-stat-card card-aitog">
+              <div class="bench-card-header">
+                <span class="bench-tag highlight">PROPOSED SYSTEM</span>
+                <h3>AI-TOG Adaptive Oracle</h3>
+              </div>
+              <div class="bench-big-stat">
+                <span class="stat-number color-pass monospace" id="benchAitogAccuracy">87.5%</span>
+                <span class="stat-label" id="benchAitogCorrect">21 / 24 Correct</span>
+              </div>
+              <div class="bench-stat-bars">
+                <div class="bench-row">
+                  <span>False Rejects:</span>
+                  <strong class="color-pass monospace" id="benchAitogFR">0</strong>
+                </div>
+                <div class="bench-row">
+                  <span>False Accepts:</span>
+                  <strong class="color-review monospace" id="benchAitogFA">3</strong>
+                </div>
+              </div>
+              <p class="bench-note">Zero false rejects on valid paraphrases. The 3 false accepts are documented semantic boundaries.</p>
+            </div>
+
+          </div>
+
+          <!-- Category Breakdown Table -->
+          <div class="card bench-table-card">
+            <div class="card-header">
+              <h3 class="card-title">Per-Category Accuracy Breakdown</h3>
+            </div>
+            <div class="table-scroller">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Naive Accuracy</th>
+                    <th>AI-TOG Accuracy</th>
+                    <th>Naive FR / FA</th>
+                    <th>AI-TOG FR / FA</th>
+                  </tr>
+                </thead>
+                <tbody id="benchCategoryTableBody">
+                  <tr><td colspan="5" class="table-empty">Loading benchmark data...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Documented Limitations Panel -->
+          <div class="card limitations-card">
+            <div class="card-header">
+              <span class="card-tag">RESEARCH RIGOR</span>
+              <h3 class="card-title">Documented Limitations & Failure Mode Analysis</h3>
+            </div>
+            <div class="card-body">
+              <div class="limits-grid" id="limitationsGrid">
+                <!-- Populated dynamically from app.py cached benchmark -->
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="footer-left">
+        <span>Project: AI-TOG (BCSE301L/P Software Engineering)</span>
+        <span class="footer-divider">•</span>
+        <span>Authors: K Sriram (24BYB0151), Piyush Patani (24BYB0146)</span>
+      </div>
+      <div class="footer-right">
+        <span>Offline Observatory System</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Reset Confirmation Modal -->
+  <div id="resetModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <h3 class="modal-title">Confirm Reset Demo State</h3>
+      <p class="modal-body">This will wipe <code>data/ui_demo.db</code> and re-bootstrap the pipeline from JSON baselines (v1). All evaluation audit logs will be reset.</p>
+      <div class="modal-actions">
+        <button id="cancelResetBtn" class="btn btn-ghost">Cancel</button>
+        <button id="confirmResetBtn" class="btn btn-danger">Yes, Reset to Baseline</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
