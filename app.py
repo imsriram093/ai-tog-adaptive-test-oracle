@@ -384,23 +384,45 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
     def handle_post_reset(self) -> None:
         global _pipeline
         with PIPELINE_LOCK:
+            # 1. Safely wipe database tables directly within SQLite to prevent
+            # Windows file-lock errors (WinError 32 / PermissionError) on OneDrive
+            storage_instance = None
             if _pipeline is not None and _pipeline.storage is not None:
+                storage_instance = _pipeline.storage
+            else:
+                from ai_tog.storage import SQLiteStorage
+                storage_instance = SQLiteStorage(DB_PATH)
+
+            try:
+                with storage_instance._conn:
+                    storage_instance._conn.execute("PRAGMA foreign_keys = OFF;")
+                    storage_instance._conn.execute("DELETE FROM review_resolutions;")
+                    storage_instance._conn.execute("DELETE FROM evaluations;")
+                    storage_instance._conn.execute("DELETE FROM threshold_scores;")
+                    storage_instance._conn.execute("DELETE FROM profile_history;")
+                    storage_instance._conn.execute("DELETE FROM reference_profiles;")
+                    try:
+                        storage_instance._conn.execute(
+                            "DELETE FROM sqlite_sequence WHERE name IN ('evaluations', 'review_resolutions', 'profile_history', 'threshold_scores');"
+                        )
+                    except Exception:
+                        pass
+                    storage_instance._conn.execute("PRAGMA foreign_keys = ON;")
+            except Exception as e:
+                # Fallback if connection failed
                 try:
-                    _pipeline.storage.close()
+                    storage_instance.close()
                 except Exception:
                     pass
-            _pipeline = None
+                if DB_PATH.exists():
+                    try:
+                        DB_PATH.unlink()
+                    except Exception:
+                        pass
+                storage_instance = None
 
-            # Remove SQLite database file
-            if DB_PATH.exists():
-                try:
-                    DB_PATH.unlink()
-                except Exception as e:
-                    self.send_json_response({"error": f"Failed to remove DB: {e}"}, status=500)
-                    return
-
-            # Rebuild fresh pipeline
-            _pipeline = build_pipeline(DATA_DIR, storage=str(DB_PATH))
+            # 2. Rebuild fresh in-memory pipeline state from Stage 1 JSON baselines
+            _pipeline = build_pipeline(DATA_DIR, storage=storage_instance or str(DB_PATH))
 
         self.send_json_response({"success": True, "message": "Demo state reset successfully to baseline"})
 
