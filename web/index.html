@@ -31,11 +31,12 @@
           </div>
         </div>
         <div class="header-meta">
+          <span class="meta-chip hud-chip-live"><span class="status-pip"></span>[ LIVE ]</span>
           <span class="meta-chip" id="storageChip">
             <span class="status-pip"></span>
-            <span id="storageLabel">Storage: SQLite (data/ui_demo.db)</span>
+            <span id="storageLabel">AUDIT: SQLITE (data/ui_demo.db)</span>
           </span>
-          <span class="meta-chip version-chip">v0.1.0</span>
+          <span class="meta-chip version-chip">SECURE LOCAL // OFFLINE</span>
         </div>
       </div>
 
@@ -95,14 +96,14 @@
           <div class="panel-column left-pane">
             
             <!-- Category & Prompt Card -->
-            <div class="card tilt-card" data-tilt>
-              <div class="card-header">
-                <span class="card-tag">TARGET SYSTEM</span>
+            <div class="card" data-depth-card>
+              <div class="card-header" data-depth="1">
+                <span class="card-tag">SPECIFICATION // STAGE 01 GROUND TRUTH</span>
                 <h2 class="card-title">Test Category Specification</h2>
               </div>
-              <div class="card-body">
+              <div class="card-body" data-depth="2">
                 <div class="field-group">
-                  <label for="categorySelect" class="field-label">Category</label>
+                  <label for="categorySelect" class="field-label">Target Module Category</label>
                   <select id="categorySelect" class="form-select">
                     <!-- Populated dynamically -->
                   </select>
@@ -111,7 +112,7 @@
                 <div class="category-meta-box">
                   <div class="meta-row">
                     <span class="meta-label">Module Prompt:</span>
-                    <span class="meta-val" id="catPromptDisplay">—</span>
+                    <span class="meta-val font-academic" id="catPromptDisplay">—</span>
                   </div>
                   <div class="meta-row">
                     <span class="meta-label">Length Limits:</span>
@@ -134,27 +135,27 @@
             </div>
 
             <!-- Candidate Input Card -->
-            <div class="card tilt-card" data-tilt>
-              <div class="card-header">
-                <span class="card-tag">CANDIDATE OUTPUT UNDER TEST</span>
-                <h2 class="card-title">Input Candidate Text</h2>
+            <div class="card" data-depth-card>
+              <div class="card-header" data-depth="1">
+                <span class="card-tag">INGESTION // CANDIDATE OUTPUT UNDER TEST</span>
+                <h2 class="card-title">Input Candidate Text <span class="terminal-caret" aria-hidden="true">_</span></h2>
               </div>
-              <div class="card-body">
+              <div class="card-body" data-depth="2">
                 <div class="field-group">
                   <label for="candidateInput" class="field-label">Output text produced by AI module:</label>
-                  <textarea id="candidateInput" class="form-textarea" rows="4" placeholder="Enter or paste output text to evaluate against adaptive oracle..."></textarea>
+                  <textarea id="candidateInput" class="form-textarea font-academic" rows="4" placeholder="Enter or paste output text to evaluate against adaptive oracle..."></textarea>
                 </div>
 
-                <div class="eval-action-bar">
+                <div class="eval-action-bar" data-depth="3">
                   <button id="evaluateBtn" class="btn btn-primary">
-                    <span class="btn-text">Evaluate Output</span>
+                    <span class="btn-text">EVALUATE OUTPUT</span>
                     <span class="btn-spinner hidden"></span>
                   </button>
-                  <button id="clearInputBtn" class="btn btn-ghost">Clear</button>
+                  <button id="clearInputBtn" class="btn btn-ghost">CLEAR</button>
                 </div>
 
                 <!-- Viva / Presets Group -->
-                <div class="presets-section">
+                <div class="presets-section" data-depth="3">
                   <div class="presets-header">
                     <span class="field-label">Curated Viva Presets (Verified Ground Truth)</span>
                     <span class="hint-label">Click to load</span>
@@ -230,24 +231,25 @@
           <!-- Right Column: 3D Verdict, Stage 3 Scorecard, Stage 4 Depth Gauge -->
           <div class="panel-column right-pane">
 
-            <!-- 3D Flipping Verdict Banner -->
+            <!-- 3D Flipping Verdict Banner (Flat layout + Cyber Decrypt Sequence) -->
             <div class="verdict-flipper-container">
               <div id="verdictCard3D" class="verdict-card-3d">
+                <div class="scanline-sweep" id="scanlineSweep" aria-hidden="true"></div>
                 <!-- Front Side: Standby -->
                 <div class="verdict-face verdict-front">
                   <div class="standby-content">
                     <span class="standby-reticle"></span>
                     <h3 class="standby-title">ORACLE AWAITING INPUT</h3>
-                    <p class="standby-sub">Select a preset or enter candidate text to trigger 5-stage evaluation.</p>
+                    <p class="standby-sub font-academic">Select a preset or enter candidate text to trigger 5-stage evaluation.</p>
                   </div>
                 </div>
                 <!-- Back Side: Resolved Verdict -->
                 <div class="verdict-face verdict-back">
                   <div class="verdict-badge-header">
-                    <span class="verdict-badge-pill" id="verdictBadge">PASS</span>
+                    <span class="verdict-badge-pill tilt-small" id="verdictBadge">PASS</span>
                     <span class="verdict-eval-id" id="verdictEvalId">EVAL #—</span>
                   </div>
-                  <div class="verdict-explanation-box" id="verdictExplanation">
+                  <div class="verdict-explanation-box font-academic" id="verdictExplanation">
                     Explanation will appear here.
                   </div>
 
@@ -259,92 +261,92 @@
                     </div>
                     <div class="review-actions">
                       <button id="resolveGoodBtn" class="btn btn-resolve-good">
-                        ✓ Approve as Good (Fold into v2 Profile)
+                        ✓ APPROVE AS GOOD (FOLD INTO V2 PROFILE)
                       </button>
                       <button id="resolveBadBtn" class="btn btn-resolve-bad">
-                        ✕ Reject as Bad (Log only)
+                        ✕ REJECT AS BAD (LOG ONLY)
                       </button>
                     </div>
-                    <p class="review-note">Approving folds candidate into reference profile centroid and appends score to threshold rolling window.</p>
+                    <p class="review-note font-academic">Approving folds candidate into reference profile centroid and appends score to threshold rolling window.</p>
                   </div>
                 </div>
               </div>
             </div>
 
             <!-- Stage 4: 3D Stepped Depth Gauge -->
-            <div class="card tilt-card" data-tilt>
-              <div class="card-header">
-                <span class="card-tag">STAGE 4</span>
+            <div class="card" data-depth-card>
+              <div class="card-header" data-depth="1">
+                <span class="card-tag">STAGE 04 // ADAPTIVE THRESHOLD</span>
                 <h2 class="card-title">Adaptive Threshold Depth Gauge</h2>
                 <span class="band-status-chip" id="coldStartChip">Adaptive Band</span>
               </div>
-              <div class="card-body">
+              <div class="card-body" data-depth="2">
                 <div class="gauge-stats-bar">
                   <div class="g-stat">
-                    <span class="g-lbl">Center (μ)</span>
+                    <span class="g-lbl">Center (<span class="math-sym">μ</span>)</span>
                     <span class="g-val monospace" id="gaugeCenterVal">—</span>
                   </div>
                   <div class="g-stat">
-                    <span class="g-lbl">Spread (σ)</span>
+                    <span class="g-lbl">Spread (<span class="math-sym">σ</span>)</span>
                     <span class="g-val monospace" id="gaugeSpreadVal">—</span>
                   </div>
                   <div class="g-stat">
-                    <span class="g-lbl">Pass Cut (μ - 1σ)</span>
+                    <span class="g-lbl">Pass Cut (<span class="math-sym">μ</span> - 1<span class="math-sym">σ</span>)</span>
                     <span class="g-val monospace color-pass" id="gaugePassCutVal">—</span>
                   </div>
                   <div class="g-stat">
-                    <span class="g-lbl">Review Cut (μ - 3σ)</span>
+                    <span class="g-lbl">Review Cut (<span class="math-sym">μ</span> - 3<span class="math-sym">σ</span>)</span>
                     <span class="g-val monospace color-review" id="gaugeReviewCutVal">—</span>
                   </div>
                 </div>
 
                 <!-- 3D Perspective Slab Gauge -->
                 <div class="gauge-3d-stage" id="gaugeStage">
-                  <div class="gauge-3d-track">
+                  <div class="gauge-3d-track" id="gaugeTrack">
                     <!-- Fail Slab -->
-                    <div class="slab slab-fail" title="Fail Zone: composite score < review cut">
-                      <span class="slab-label">FAIL ZONE</span>
+                    <div class="slab slab-fail" id="slabFail" title="Fail Zone: composite score < review cut">
+                      <span class="slab-label" id="labelSlabFail">FAIL ZONE</span>
                     </div>
                     <!-- Review Cut Blade -->
                     <div class="gauge-blade blade-review" id="bladeReview" title="Review Cut Boundary">
                       <span class="blade-tag">Review Cut</span>
                     </div>
                     <!-- Review Slab -->
-                    <div class="slab slab-review" title="Review Zone: review cut <= composite score < pass cut">
-                      <span class="slab-label">REVIEW ZONE</span>
+                    <div class="slab slab-review" id="slabReview" title="Review Zone: review cut <= composite score < pass cut">
+                      <span class="slab-label" id="labelSlabReview">REVIEW ZONE</span>
                     </div>
                     <!-- Pass Cut Blade -->
                     <div class="gauge-blade blade-pass" id="bladePass" title="Pass Cut Boundary">
                       <span class="blade-tag">Pass Cut</span>
                     </div>
                     <!-- Pass Slab -->
-                    <div class="slab slab-pass" title="Pass Zone: composite score >= pass cut">
-                      <span class="slab-label">PASS ZONE</span>
+                    <div class="slab slab-pass" id="slabPass" title="Pass Zone: composite score >= pass cut">
+                      <span class="slab-label" id="labelSlabPass">PASS ZONE</span>
                     </div>
 
                     <!-- Floating Score Marker -->
                     <div class="floating-score-marker" id="scoreMarker">
-                      <div class="marker-pip"></div>
-                      <div class="marker-stem"></div>
                       <div class="marker-pill" id="markerPill">Score: —</div>
+                      <div class="marker-stem"></div>
+                      <div class="marker-pip"></div>
                       <div class="marker-shadow"></div>
                     </div>
                   </div>
                 </div>
 
                 <div class="gauge-legend">
-                  <span>Boundary Formula: <code>Pass Cut = μ - 1.0σ</code>, <code>Review Cut = μ - 3.0σ</code></span>
+                  <span>Boundary Formula: <code>Pass Cut = <span class="math-sym">μ</span> - 1.0<span class="math-sym">σ</span></code>, <code>Review Cut = <span class="math-sym">μ</span> - 3.0<span class="math-sym">σ</span></code></span>
                 </div>
               </div>
             </div>
 
             <!-- Stage 3: Multi-Signal Scorecard -->
-            <div class="card tilt-card" data-tilt>
-              <div class="card-header">
-                <span class="card-tag">STAGE 3</span>
+            <div class="card" data-depth-card>
+              <div class="card-header" data-depth="1">
+                <span class="card-tag">STAGE 03 // ORACLE SCORING</span>
                 <h2 class="card-title">Multi-Signal Scorecard</h2>
               </div>
-              <div class="card-body">
+              <div class="card-body" data-depth="2">
                 <div class="scorecard-grid">
 
                   <!-- Signal 1: Semantic Similarity -->
@@ -420,52 +422,31 @@
             <div class="iso-stack-container">
               <div class="iso-stack" id="isoStack">
                 
-                <div class="iso-slab" data-stage="1" id="stageSlab1">
-                  <div class="slab-top">
-                    <span class="slab-num">01</span>
-                    <span class="slab-title">Baseline Examples</span>
-                  </div>
-                  <div class="slab-face">Curated known-good answers from QA (Stage 1)</div>
+                <div class="iso-slab" data-stage="1" id="stageSlab1" title="Stage 01: Baseline Examples">
+                  <span class="slab-num">STAGE 01</span>
+                  <span class="slab-title">Baseline Examples</span>
                 </div>
 
-                <div class="iso-slab" data-stage="2" id="stageSlab2">
-                  <div class="slab-top">
-                    <span class="slab-num">02</span>
-                    <span class="slab-title">Reference Profile</span>
-                  </div>
-                  <div class="slab-face">Embedding Centroid + Domain Invariants (Stage 2)</div>
+                <div class="iso-slab" data-stage="2" id="stageSlab2" title="Stage 02: Reference Profile">
+                  <span class="slab-num">STAGE 02</span>
+                  <span class="slab-title">Reference Profile</span>
                 </div>
 
-                <div class="iso-slab" data-stage="3" id="stageSlab3">
-                  <div class="slab-top">
-                    <span class="slab-num">03</span>
-                    <span class="slab-title">Oracle Scoring</span>
-                  </div>
-                  <div class="slab-face">Semantic + Structural + Invariant Signals (Stage 3)</div>
+                <div class="iso-slab" data-stage="3" id="stageSlab3" title="Stage 03: Oracle Scoring">
+                  <span class="slab-num">STAGE 03</span>
+                  <span class="slab-title">Oracle Scoring</span>
                 </div>
 
-                <div class="iso-slab" data-stage="4" id="stageSlab4">
-                  <div class="slab-top">
-                    <span class="slab-num">04</span>
-                    <span class="slab-title">Adaptive Threshold</span>
-                  </div>
-                  <div class="slab-face">Rolling Window Control-Chart Bounds μ ± zσ (Stage 4)</div>
+                <div class="iso-slab" data-stage="4" id="stageSlab4" title="Stage 04: Adaptive Threshold">
+                  <span class="slab-num">STAGE 04</span>
+                  <span class="slab-title">Adaptive Threshold</span>
                 </div>
 
-                <div class="iso-slab active" data-stage="5" id="stageSlab5">
-                  <div class="slab-top">
-                    <span class="slab-num">05</span>
-                    <span class="slab-title">Verdict & Feedback</span>
-                  </div>
-                  <div class="slab-face">Pass / Review / Fail + Human-in-the-Loop Loop (Stage 5)</div>
+                <div class="iso-slab active" data-stage="5" id="stageSlab5" title="Stage 05: Verdict & Feedback">
+                  <span class="slab-num">STAGE 05</span>
+                  <span class="slab-title">Verdict &amp; Feedback</span>
                 </div>
 
-              </div>
-
-              <!-- Animated Feedback Loop Arc -->
-              <div class="feedback-loop-indicator">
-                <div class="loop-arrow-pulse"></div>
-                <span>Stage 5 Closed Feedback Loop updates Stage 2 Centroid & Stage 4 Window</span>
               </div>
             </div>
 
@@ -696,13 +677,13 @@
 
     <!-- Footer -->
     <footer class="app-footer">
-      <div class="footer-left">
-        <span>Project: AI-TOG (BCSE301L/P Software Engineering)</span>
+      <div class="footer-left font-academic">
+        <span>AI-TOG: Adaptive Test Oracle Generation for AI-Integrated Software Modules</span>
         <span class="footer-divider">•</span>
-        <span>Authors: K Sriram (24BYB0151), Piyush Patani (24BYB0146)</span>
+        <em>K Sriram (24BYB0151), Piyush Patani (24BYB0146) — BCSE301L/P Software Engineering, VIT Vellore</em>
       </div>
       <div class="footer-right">
-        <span>Offline Observatory System</span>
+        <span class="hud-mono-chip">[ CYBER OBSIDIAN HUD // OFFLINE NODE ]</span>
       </div>
     </footer>
 
