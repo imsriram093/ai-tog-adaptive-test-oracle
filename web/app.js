@@ -108,7 +108,7 @@
     "5": {
       title: "Stage 5: Verdict Aggregation & Closed-Loop Feedback",
       tag: "STAGE 5 CLOSED FEEDBACK LOOP",
-      desc: "Resolves candidate into PASS, REVIEW, or FAIL. When a human resolves a REVIEW case as 'good', that candidate is folded into Stage 2 profile (n=n+1, version++) and its score is added to the Stage 4 rolling window.",
+      desc: "Resolves candidate into PASS, REVIEW, or FAIL. Closed-Loop Feedback: When a human approves a REVIEW case, Stage 5 folds the candidate into the Stage 2 Reference Profile (version++, n=n+1) and appends its score to the Stage 4 rolling threshold window. Rejected cases are logged to SQLite without profile mutation.",
     }
   };
 
@@ -136,6 +136,14 @@
     gaugePassCutVal: document.getElementById("gaugePassCutVal"),
     gaugeReviewCutVal: document.getElementById("gaugeReviewCutVal"),
     coldStartChip: document.getElementById("coldStartChip"),
+    gaugeStage: document.getElementById("gaugeStage"),
+    gaugeTrack: document.getElementById("gaugeTrack"),
+    slabFail: document.getElementById("slabFail"),
+    slabReview: document.getElementById("slabReview"),
+    slabPass: document.getElementById("slabPass"),
+    labelSlabFail: document.getElementById("labelSlabFail"),
+    labelSlabReview: document.getElementById("labelSlabReview"),
+    labelSlabPass: document.getElementById("labelSlabPass"),
     scoreMarker: document.getElementById("scoreMarker"),
     markerPill: document.getElementById("markerPill"),
     bladeReview: document.getElementById("bladeReview"),
@@ -191,10 +199,16 @@
   async function init() {
     initTheme();
     initCanvasParticles();
-    initTiltCards();
+    initSpotlightAndDepthLayers();
+    initSmallElementTilt();
     initNavigation();
     initPresets();
     initEventListeners();
+
+    // Listen for reduced motion changes
+    window.matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", (e) => {
+      state.isReducedMotion = e.matches;
+    });
 
     await loadCategories();
     // Pre-fetch benchmark in background
@@ -202,7 +216,7 @@
   }
 
   // ========================================================================
-  // THEME & AMBIENT CANVAS
+  // THEME & AMBIENT CANVAS (CYBER NETWORK GRAPH)
   // ========================================================================
 
   function initTheme() {
@@ -214,110 +228,272 @@
     });
   }
 
+  // PART A #9: Cyber Network Graph Canvas (drifting nodes, connecting lines, slow scanline)
   function initCanvasParticles() {
-    if (state.isReducedMotion || !dom.ambientCanvas) return;
+    if (!dom.ambientCanvas) return;
     const canvas = dom.ambientCanvas;
     const ctx = canvas.getContext("2d");
     let width, height;
-    let particles = [];
+    let nodes = [];
     let mouse = { x: 0, y: 0, targetX: 0, targetY: 0 };
+    let scanlineY = 0;
     let animationFrameId = null;
+    let isRunning = false;
 
     function resize() {
       width = canvas.width = window.innerWidth;
       height = canvas.height = window.innerHeight;
     }
 
-    function createParticles() {
-      particles = [];
-      const count = Math.min(60, Math.floor(width / 30));
+    function createNodes() {
+      nodes = [];
+      const count = Math.min(42, Math.max(18, Math.floor(width / 38)));
       for (let i = 0; i < count; i++) {
-        particles.push({
+        nodes.push({
           x: Math.random() * width,
           y: Math.random() * height,
-          vx: (Math.random() - 0.5) * 0.25,
-          vy: (Math.random() - 0.5) * 0.25,
-          radius: Math.random() * 1.5 + 0.5,
-          alpha: Math.random() * 0.4 + 0.15,
+          vx: (Math.random() - 0.5) * 0.28,
+          vy: (Math.random() - 0.5) * 0.28,
+          radius: Math.random() * 1.5 + 1.0,
+          color: i % 3 === 0 ? "139, 92, 255" : "0, 240, 255",
+          alpha: Math.random() * 0.4 + 0.2,
         });
       }
     }
 
     function animate() {
-      if (document.hidden) {
-        animationFrameId = requestAnimationFrame(animate);
+      if (document.hidden || state.isReducedMotion) {
+        isRunning = false;
         return;
       }
-
       ctx.clearRect(0, 0, width, height);
 
-      // Smooth mouse parallax
       mouse.x += (mouse.targetX - mouse.x) * 0.05;
       mouse.y += (mouse.targetY - mouse.y) * 0.05;
 
-      const isLight = document.documentElement.getAttribute("data-theme") === "light";
-      const dotColor = isLight ? "rgba(26, 31, 29, " : "rgba(95, 211, 165, ";
+      const isDark = state.theme === "dark";
 
-      for (let p of particles) {
-        p.x += p.vx;
-        p.y += p.vy;
+      // Slow cyber scanline
+      scanlineY = (scanlineY + 0.45) % height;
+      ctx.fillStyle = isDark ? "rgba(0, 240, 255, 0.025)" : "rgba(105, 51, 211, 0.02)";
+      ctx.fillRect(0, scanlineY, width, 2);
 
-        if (p.x < 0) p.x = width;
-        if (p.x > width) p.x = 0;
-        if (p.y < 0) p.y = height;
-        if (p.y > height) p.y = 0;
+      // Update node positions with mouse parallax
+      for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        n.x += n.vx;
+        n.y += n.vy;
 
-        const px = p.x + mouse.x * (p.radius * 2);
-        const py = p.y + mouse.y * (p.radius * 2);
+        if (n.x < -10) n.x = width + 10;
+        if (n.x > width + 10) n.x = -10;
+        if (n.y < -10) n.y = height + 10;
+        if (n.y > height + 10) n.y = -10;
 
+        n.renderX = n.x + mouse.x * (n.radius * 1.2);
+        n.renderY = n.y + mouse.y * (n.radius * 1.2);
+      }
+
+      // Draw connecting lines between nodes within 95px
+      const maxDist = 95;
+      const maxDistSq = maxDist * maxDist;
+      ctx.lineWidth = 0.75;
+
+      for (let i = 0; i < nodes.length; i++) {
+        const ni = nodes[i];
+        for (let j = i + 1; j < nodes.length; j++) {
+          const nj = nodes[j];
+          const dx = ni.renderX - nj.renderX;
+          const dy = ni.renderY - nj.renderY;
+          const distSq = dx * dx + dy * dy;
+
+          if (distSq < maxDistSq) {
+            const dist = Math.sqrt(distSq);
+            const lineAlpha = (1 - dist / maxDist) * 0.16;
+            ctx.strokeStyle = isDark ? `rgba(0, 240, 255, ${lineAlpha})` : `rgba(105, 51, 211, ${lineAlpha})`;
+            ctx.beginPath();
+            ctx.moveTo(ni.renderX, ni.renderY);
+            ctx.lineTo(nj.renderX, nj.renderY);
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Draw node dots
+      for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
         ctx.beginPath();
-        ctx.arc(px, py, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = dotColor + p.alpha + ")";
+        ctx.arc(n.renderX, n.renderY, n.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(${n.color}, ${n.alpha * (isDark ? 0.75 : 0.5)})`;
         ctx.fill();
       }
 
       animationFrameId = requestAnimationFrame(animate);
     }
 
+    function startLoop() {
+      if (!isRunning && !document.hidden && !state.isReducedMotion) {
+        isRunning = true;
+        animationFrameId = requestAnimationFrame(animate);
+      }
+    }
+
+    function stopLoop() {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+      isRunning = false;
+    }
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) stopLoop();
+      else startLoop();
+    });
+
     window.addEventListener("resize", () => {
       resize();
-      createParticles();
+      createNodes();
     });
 
     window.addEventListener("mousemove", (e) => {
-      mouse.targetX = (e.clientX / width - 0.5) * 15;
-      mouse.targetY = (e.clientY / height - 0.5) * 15;
+      mouse.targetX = (e.clientX / width - 0.5) * 18;
+      mouse.targetY = (e.clientY / height - 0.5) * 18;
     });
 
     resize();
-    createParticles();
-    animate();
+    createNodes();
+    startLoop();
   }
 
-  // Pointer-driven 3D Card Tilt (~6deg max)
-  function initTiltCards() {
+  // PART A #1, #2, #3: Spotlight Edge & Depth Layers Parallax via single shared rAF loop
+  function initSpotlightAndDepthLayers() {
     if (state.isReducedMotion) return;
-    const cards = document.querySelectorAll("[data-tilt]");
 
-    cards.forEach((card) => {
-      card.addEventListener("mousemove", (e) => {
+    const cards = Array.from(document.querySelectorAll(".card"));
+    if (cards.length === 0) return;
+
+    let targetMouse = { x: -1000, y: -1000 };
+    let currentMouse = { x: -1000, y: -1000 };
+    let rafId = null;
+
+    window.addEventListener("pointermove", (e) => {
+      targetMouse.x = e.clientX;
+      targetMouse.y = e.clientY;
+    }, { passive: true });
+
+    function tick() {
+      if (document.hidden || state.isReducedMotion) {
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
+
+      // Lerp mouse coordinates (factor ~0.08)
+      currentMouse.x += (targetMouse.x - currentMouse.x) * 0.08;
+      currentMouse.y += (targetMouse.y - currentMouse.y) * 0.08;
+
+      const viewportH = window.innerHeight;
+
+      for (let i = 0; i < cards.length; i++) {
+        const card = cards[i];
         const rect = card.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const centerX = rect.width / 2;
-        const centerY = rect.height / 2;
-        const rotateX = ((y - centerY) / centerY) * -4.5;
-        const rotateY = ((x - centerX) / centerX) * 4.5;
 
-        card.style.setProperty("--pointer-x", `${x}px`);
-        card.style.setProperty("--pointer-y", `${y}px`);
-        card.style.transform = `perspective(1200px) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg) translateY(-2px)`;
+        // Skip off-screen cards
+        if (rect.bottom < -50 || rect.top > viewportH + 50) continue;
+
+        const localX = currentMouse.x - rect.left;
+        const localY = currentMouse.y - rect.top;
+
+        // Update spotlight coordinates
+        card.style.setProperty("--mx", `${localX.toFixed(1)}px`);
+        card.style.setProperty("--my", `${localY.toFixed(1)}px`);
+
+        // Check if cursor is over or near card
+        const isHovered = localX >= 0 && localX <= rect.width && localY >= 0 && localY <= rect.height;
+        const targetNormX = isHovered ? ((localX - rect.width / 2) / (rect.width / 2)) : 0;
+        const targetNormY = isHovered ? ((localY - rect.height / 2) / (rect.height / 2)) : 0;
+
+        card._normX = (card._normX || 0) + (targetNormX - (card._normX || 0)) * 0.08;
+        card._normY = (card._normY || 0) + (targetNormY - (card._normY || 0)) * 0.08;
+
+        const layers = card.querySelectorAll("[data-depth]");
+        if (layers.length > 0) {
+          if (Math.abs(card._normX) > 0.002 || Math.abs(card._normY) > 0.002) {
+            layers.forEach((layer) => {
+              const depth = parseFloat(layer.getAttribute("data-depth")) || 1;
+              const maxPx = depth === 1 ? 1.5 : depth === 2 ? 3.5 : 6.0;
+              const dx = (card._normX * maxPx).toFixed(2);
+              const dy = (card._normY * maxPx).toFixed(2);
+              layer.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+            });
+            card._hasMoved = true;
+          } else if (card._hasMoved) {
+            layers.forEach((layer) => {
+              layer.style.transform = "";
+            });
+            card._hasMoved = false;
+          }
+        }
+      }
+
+      rafId = requestAnimationFrame(tick);
+    }
+
+    rafId = requestAnimationFrame(tick);
+  }
+
+  // PART A #4: Small Element Tilt (Verdict Badge, KPI chips) <= 8deg, 600ms spring return
+  function initSmallElementTilt() {
+    if (state.isReducedMotion) return;
+
+    const targets = document.querySelectorAll(".verdict-badge-pill, .stat-number, .kpi-card");
+
+    targets.forEach((el) => {
+      el.addEventListener("pointermove", (e) => {
+        if (state.isReducedMotion) return;
+        const rect = el.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width - 0.5; // -0.5 to 0.5
+        const y = (e.clientY - rect.top) / rect.height - 0.5;
+        const rotX = (-y * 16).toFixed(2); // Max 8 deg
+        const rotY = (x * 16).toFixed(2);  // Max 8 deg
+        el.style.transition = "transform 0.05s ease-out";
+        el.style.transform = `perspective(500px) rotateX(${rotX}deg) rotateY(${rotY}deg)`;
       });
 
-      card.addEventListener("mouseleave", () => {
-        card.style.transform = `perspective(1200px) rotateX(0deg) rotateY(0deg) translateY(0px)`;
+      el.addEventListener("pointerleave", () => {
+        if (state.isReducedMotion) return;
+        el.style.transition = "transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+        el.style.transform = "perspective(500px) rotateX(0deg) rotateY(0deg)";
       });
     });
+  }
+
+  // Smooth number count-up animation
+  function animateNumber(el, targetVal, decimals = 4, duration = 380) {
+    if (!el || targetVal === null || targetVal === undefined) return;
+    if (state.isReducedMotion) {
+      el.textContent = targetVal.toFixed(decimals);
+      return;
+    }
+    const currentText = el.textContent.trim();
+    const startVal = (currentText === "—" || currentText === "") ? targetVal : (parseFloat(currentText) || 0);
+    if (Math.abs(startVal - targetVal) < 0.0001) {
+      el.textContent = targetVal.toFixed(decimals);
+      return;
+    }
+    const startTime = performance.now();
+    function step(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      const current = startVal + (targetVal - startVal) * ease;
+      el.textContent = current.toFixed(decimals);
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+        el.textContent = targetVal.toFixed(decimals);
+      }
+    }
+    requestAnimationFrame(step);
   }
 
   // ========================================================================
@@ -506,17 +682,80 @@
     }
   }
 
+  // PART A #5: Cyber Decrypt Text Scrambler (Resolves to PASS/REVIEW/FAIL over ~600ms)
+  function scrambleDecrypt(targetText, element, duration = 600, onComplete) {
+    if (state.isReducedMotion) {
+      element.textContent = targetText;
+      if (onComplete) onComplete();
+      return;
+    }
+
+    const chars = "0123456789ABCDEF!#@%&*<>[]:/~";
+    const length = targetText.length;
+    const startTime = performance.now();
+
+    function update(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      const resolvedCount = Math.floor(progress * length);
+
+      let output = "";
+      for (let i = 0; i < length; i++) {
+        if (i < resolvedCount) {
+          output += targetText[i];
+        } else {
+          output += chars[Math.floor(Math.random() * chars.length)];
+        }
+      }
+
+      element.textContent = output;
+
+      if (progress < 1) {
+        requestAnimationFrame(update);
+      } else {
+        element.textContent = targetText;
+        if (onComplete) onComplete();
+      }
+    }
+
+    requestAnimationFrame(update);
+  }
+
   function renderEvaluationResult(result) {
     const backFace = dom.verdictCard3D.querySelector(".verdict-back");
 
-    // Remove prior verdict classes
-    backFace.classList.remove("verdict-is-pass", "verdict-is-review", "verdict-is-fail");
-    dom.verdictCard3D.classList.remove("flipped");
+    // Remove prior verdict classes, glow bursts, and glitch
+    backFace.classList.remove("verdict-is-pass", "verdict-is-review", "verdict-is-fail", "glow-burst-pass", "glow-burst-review", "glow-burst-fail");
+    dom.verdictCard3D.classList.remove("glitch-active", "glow-burst-pass", "glow-burst-review", "glow-burst-fail");
+
+    // Transition to revealed state (flat layout, no coin-flip rotate)
+    dom.verdictCard3D.classList.add("flipped");
 
     const vLower = result.verdict.toLowerCase();
-    backFace.classList.add(`verdict-is-${vLower}`);
 
-    dom.verdictBadge.textContent = result.verdict;
+    // 1. Scan-line sweep across the verdict card
+    const sweep = document.getElementById("scanlineSweep");
+    if (sweep && !state.isReducedMotion) {
+      sweep.classList.remove("sweeping");
+      void sweep.offsetWidth; // trigger reflow
+      sweep.classList.add("sweeping");
+    }
+
+    // 2. Text "decrypt" scramble (random hex/glyphs resolving to PASS/REVIEW/FAIL over ~600ms)
+    scrambleDecrypt(result.verdict, dom.verdictBadge, 600, () => {
+      // 3. Glow pulse in verdict colour upon resolution
+      backFace.classList.add(`verdict-is-${vLower}`, `glow-burst-${vLower}`);
+      dom.verdictCard3D.classList.add(`glow-burst-${vLower}`);
+
+      // 4. FAIL adds a brief 150ms RGB-split glitch. PASS/REVIEW do NOT glitch.
+      if (result.verdict === "FAIL" && !state.isReducedMotion) {
+        dom.verdictCard3D.classList.add("glitch-active");
+        setTimeout(() => {
+          dom.verdictCard3D.classList.remove("glitch-active");
+        }, 150);
+      }
+    });
+
     dom.verdictEvalId.textContent = `EVAL #${result.evaluation_id ?? "—"}`;
     dom.verdictExplanation.textContent = result.explanation;
 
@@ -526,11 +765,6 @@
     } else {
       dom.humanReviewWidget.classList.add("hidden");
     }
-
-    // Flip card to reveal back side
-    setTimeout(() => {
-      dom.verdictCard3D.classList.add("flipped");
-    }, 50);
 
     // Update Depth Gauge
     updateDepthGauge(result.band, result.signals.composite_score);
@@ -544,7 +778,7 @@
     const pen = result.penalties;
 
     // 1. Semantic Similarity
-    dom.sigSemanticScore.textContent = sig.semantic_similarity.toFixed(4);
+    animateNumber(dom.sigSemanticScore, sig.semantic_similarity, 4);
     const semPercent = Math.max(0, Math.min(100, sig.semantic_similarity * 100));
     dom.sigSemanticBar.style.width = `${semPercent.toFixed(1)}%`;
     dom.sigSemanticBar.style.backgroundColor = sig.semantic_similarity >= result.band.pass_cut ? "var(--pass)" : "var(--review)";
@@ -578,7 +812,7 @@
     }
 
     // Composite Score
-    dom.sigCompositeScore.textContent = sig.composite_score.toFixed(4);
+    animateNumber(dom.sigCompositeScore, sig.composite_score, 4);
     let formula = `semantic (${sig.semantic_similarity.toFixed(3)})`;
     if (pen.applied_structural) formula += ` - 0.15 struct`;
     if (pen.applied_invariant) formula += ` - 0.25 invar`;
@@ -586,31 +820,78 @@
   }
 
   // ========================================================================
-  // STAGE 4 DEPTH GAUGE
+  // STAGE 4 DEPTH GAUGE (Unified Linear Mapping Function)
   // ========================================================================
 
   function updateDepthGauge(band, score) {
-    dom.gaugeCenterVal.textContent = band.center.toFixed(4);
-    dom.gaugeSpreadVal.textContent = band.spread.toFixed(4);
-    dom.gaugePassCutVal.textContent = band.pass_cut.toFixed(4);
-    dom.gaugeReviewCutVal.textContent = band.review_cut.toFixed(4);
+    if (!band) return;
+
+    animateNumber(dom.gaugeCenterVal, band.center, 4);
+    animateNumber(dom.gaugeSpreadVal, band.spread, 4);
+    animateNumber(dom.gaugePassCutVal, band.pass_cut, 4);
+    animateNumber(dom.gaugeReviewCutVal, band.review_cut, 4);
 
     dom.coldStartChip.textContent = band.is_cold_start ? "Cold Start Fallback" : "Adaptive Window Band";
     dom.coldStartChip.classList.toggle("cold-start", band.is_cold_start);
 
-    // Normalized positioning for blades (scale 0.0 to 1.0)
-    // Clamp review cut between 10% and 50%
-    const rCutNorm = Math.max(10, Math.min(50, band.review_cut * 100));
-    // Clamp pass cut between 45% and 85%
-    const pCutNorm = Math.max(rCutNorm + 15, Math.min(85, band.pass_cut * 100));
+    // ONE linear mapping function derived from live band
+    // min = review_cut - 1.5 * spread, max = 1.0 (with safe guards)
+    const spread = Math.max(0.015, band.spread || 0.1);
+    const minVal = Math.min(0, band.review_cut - 1.5 * spread);
+    const maxVal = 1.0;
+    const range = Math.max(0.15, maxVal - minVal);
 
-    dom.bladeReview.style.left = `${rCutNorm.toFixed(1)}%`;
-    dom.bladePass.style.left = `${pCutNorm.toFixed(1)}%`;
+    const clamp = (v) => Math.max(0, Math.min(1, v));
+    const pos = (val) => clamp((val - minVal) / range) * 100;
 
-    // Position score marker
+    const rCutPct = pos(band.review_cut);
+    const pCutPct = pos(band.pass_cut);
+
+    // Dynamic zone widths directly computed from the exact same mapping function
+    const failWidth = Math.max(1, rCutPct);
+    const reviewWidth = Math.max(1, pCutPct - rCutPct);
+    const passWidth = Math.max(1, 100 - pCutPct);
+
+    if (dom.slabFail) dom.slabFail.style.width = `${failWidth.toFixed(2)}%`;
+    if (dom.slabReview) dom.slabReview.style.width = `${reviewWidth.toFixed(2)}%`;
+    if (dom.slabPass) dom.slabPass.style.width = `${passWidth.toFixed(2)}%`;
+
+    // Boundary blades positioned from the exact same cuts
+    dom.bladeReview.style.left = `${rCutPct.toFixed(2)}%`;
+    dom.bladePass.style.left = `${pCutPct.toFixed(2)}%`;
+
+    // Auto-stagger labels if closer than 60px
+    const trackWidth = (dom.gaugeTrack && dom.gaugeTrack.offsetWidth > 0) ? dom.gaugeTrack.offsetWidth : 420;
+    const pixelDist = (Math.abs(pCutPct - rCutPct) / 100) * trackWidth;
+    const reviewTag = dom.bladeReview.querySelector(".blade-tag");
+    const passTag = dom.bladePass.querySelector(".blade-tag");
+
+    if (reviewTag && passTag) {
+      if (pixelDist < 60) {
+        reviewTag.style.top = "calc(100% + 12px)";
+        passTag.style.top = "calc(100% + 34px)";
+      } else {
+        reviewTag.style.top = "calc(100% + 12px)";
+        passTag.style.top = "calc(100% + 12px)";
+      }
+    }
+
+    // Zone label auto-shorten so text never sits under a blade
+    if (dom.labelSlabFail) {
+      dom.labelSlabFail.textContent = failWidth < 12 ? "FAIL" : "FAIL ZONE";
+    }
+    if (dom.labelSlabReview) {
+      dom.labelSlabReview.textContent = reviewWidth < 14 ? "REV" : "REVIEW ZONE";
+      dom.labelSlabReview.style.display = reviewWidth < 7 ? "none" : "";
+    }
+    if (dom.labelSlabPass) {
+      dom.labelSlabPass.textContent = passWidth < 14 ? "PASS" : "PASS ZONE";
+    }
+
+    // Floating score marker positioned using the SAME linear function
     if (score !== null && score !== undefined) {
-      const scorePercent = Math.max(2, Math.min(98, score * 100));
-      dom.scoreMarker.style.left = `${scorePercent.toFixed(1)}%`;
+      const scorePct = pos(score);
+      dom.scoreMarker.style.left = `${scorePct.toFixed(2)}%`;
       dom.markerPill.textContent = `Score: ${score.toFixed(3)}`;
       dom.scoreMarker.style.display = "flex";
     } else {
@@ -705,11 +986,12 @@
         category_id: cat.category_id,
         profile_version: cat.profile.version,
         n_examples: cat.profile.n_examples,
+        created_at: formatTimestamp(cat.profile.created_at),
         min_length: cat.min_length,
         max_length: cat.max_length,
         required_terms: cat.required_terms,
         banned_terms: cat.banned_terms,
-        history_entries: cat.profile.history,
+        history_entries: (cat.profile.history || []).map(formatTimestampsInText),
       };
     } else if (stageStr === "3") {
       jsonState = {
@@ -746,6 +1028,51 @@
   }
 
   // ========================================================================
+  // TIMEZONE FORMATTING HELPER (Asia/Kolkata / IST, UTC+05:30)
+  // Backend stores UTC (ISO 8601 with +00:00 / Z, or naive UTC strings).
+  // Frontend converts to IST at render time: "21 Oct 2026, 18:23:17 IST"
+  // ========================================================================
+
+  const DISPLAY_TZ = "Asia/Kolkata";
+  const IST_FORMATTER = new Intl.DateTimeFormat("en-GB", {
+    timeZone: DISPLAY_TZ,
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+
+  function formatTimestamp(value) {
+    if (!value || (typeof value !== "string" && !(value instanceof Date))) return "—";
+    try {
+      let iso = typeof value === "string" ? value.trim() : value.toISOString();
+      if (!iso) return "—";
+      // Normalize naive SQL timestamp (e.g. "2026-10-21 12:53:17") to UTC ISO
+      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/.test(iso)) {
+        iso = iso.replace(" ", "T") + "Z";
+      }
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return "—";
+      return IST_FORMATTER.format(d) + " IST";
+    } catch {
+      return "—";
+    }
+  }
+
+  const ISO_TIMESTAMP_REGEX = /\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?/g;
+
+  function formatTimestampsInText(text) {
+    if (!text || typeof text !== "string") return text || "";
+    return text.replace(ISO_TIMESTAMP_REGEX, (match) => {
+      const formatted = formatTimestamp(match);
+      return formatted !== "—" ? formatted : match;
+    });
+  }
+
+  // ========================================================================
   // AUDIT LOGS & PERSISTENCE TAB
   // ========================================================================
 
@@ -756,10 +1083,11 @@
       const data = await res.json();
       state.auditData = data;
 
-      // 1. Evaluations Table
+      // 1. Evaluations Table (sorted newest-first)
       dom.evaluationsTableBody.replaceChildren();
-      dom.evalCount.textContent = data.evaluations.length;
-      if (data.evaluations.length === 0) {
+      const evaluations = (data.evaluations || []).slice().sort((a, b) => (new Date(b.evaluated_at || 0) - new Date(a.evaluated_at || 0)) || (Number(b.id) - Number(a.id)));
+      dom.evalCount.textContent = evaluations.length;
+      if (evaluations.length === 0) {
         const tr = document.createElement("tr");
         const td = document.createElement("td");
         td.colSpan = 6;
@@ -768,7 +1096,7 @@
         tr.appendChild(td);
         dom.evaluationsTableBody.appendChild(tr);
       } else {
-        data.evaluations.slice().reverse().forEach((ev) => {
+        evaluations.forEach((ev) => {
           const tr = document.createElement("tr");
 
           const tdId = document.createElement("td");
@@ -788,23 +1116,25 @@
 
           const tdVer = document.createElement("td");
           const pill = document.createElement("span");
-          pill.className = `status-badge ${ev.verdict.toLowerCase() === "pass" ? "pass" : ev.verdict.toLowerCase() === "review" ? "review" : "fail"}`;
+          const vLower = (ev.verdict || "").toLowerCase();
+          pill.className = `status-badge ${vLower === "pass" ? "pass" : vLower === "review" ? "review" : "fail"}`;
           pill.textContent = ev.verdict;
           tdVer.appendChild(pill);
 
           const tdTime = document.createElement("td");
-          tdTime.className = "monospace";
-          tdTime.textContent = ev.evaluated_at ? ev.evaluated_at.split("T")[1]?.slice(0, 8) || ev.evaluated_at : "—";
+          tdTime.className = "monospace cell-timestamp";
+          tdTime.textContent = formatTimestamp(ev.evaluated_at);
 
           tr.append(tdId, tdCat, tdText, tdScore, tdVer, tdTime);
           dom.evaluationsTableBody.appendChild(tr);
         });
       }
 
-      // 2. Resolutions Table
+      // 2. Resolutions Table (sorted newest-first)
       dom.resolutionsTableBody.replaceChildren();
-      dom.resCount.textContent = data.resolutions.length;
-      if (data.resolutions.length === 0) {
+      const resolutions = (data.resolutions || []).slice().sort((a, b) => (new Date(b.resolved_at || 0) - new Date(a.resolved_at || 0)) || (Number(b.id) - Number(a.id)));
+      dom.resCount.textContent = resolutions.length;
+      if (resolutions.length === 0) {
         const tr = document.createElement("tr");
         const td = document.createElement("td");
         td.colSpan = 4;
@@ -813,7 +1143,7 @@
         tr.appendChild(td);
         dom.resolutionsTableBody.appendChild(tr);
       } else {
-        data.resolutions.slice().reverse().forEach((r) => {
+        resolutions.forEach((r) => {
           const tr = document.createElement("tr");
 
           const tdId = document.createElement("td");
@@ -829,19 +1159,20 @@
           tdLabel.className = r.human_label === "good" ? "color-pass font-bold" : "color-fail font-bold";
 
           const tdTime = document.createElement("td");
-          tdTime.className = "monospace";
-          tdTime.textContent = r.resolved_at ? r.resolved_at.split("T")[1]?.slice(0, 8) || r.resolved_at : "—";
+          tdTime.className = "monospace cell-timestamp";
+          tdTime.textContent = formatTimestamp(r.resolved_at);
 
           tr.append(tdId, tdEvalId, tdLabel, tdTime);
           dom.resolutionsTableBody.appendChild(tr);
         });
       }
 
-      // 3. Profile Evolution History Table
+      // 3. Profile Evolution History Table (sorted ascending by time, v1 before v2)
       dom.historyTableBody.replaceChildren();
       let totalHistory = 0;
-      for (const [catId, entries] of Object.entries(data.history)) {
-        entries.forEach((h) => {
+      for (const [catId, entries] of Object.entries(data.history || {})) {
+        const sortedEntries = (entries || []).slice().sort((a, b) => (new Date(a.recorded_at || 0) - new Date(b.recorded_at || 0)) || (Number(a.version) - Number(b.version)));
+        sortedEntries.forEach((h) => {
           totalHistory++;
           const tr = document.createElement("tr");
 
@@ -853,11 +1184,11 @@
           tdVer.textContent = `v${h.version}`;
 
           const tdNote = document.createElement("td");
-          tdNote.textContent = h.note;
+          tdNote.textContent = formatTimestampsInText(h.note || "");
 
           const tdTime = document.createElement("td");
-          tdTime.className = "monospace";
-          tdTime.textContent = h.recorded_at ? h.recorded_at.split("T")[0] + " " + (h.recorded_at.split("T")[1]?.slice(0, 8) || "") : "—";
+          tdTime.className = "monospace cell-timestamp";
+          tdTime.textContent = formatTimestamp(h.recorded_at);
 
           tr.append(tdCat, tdVer, tdNote, tdTime);
           dom.historyTableBody.appendChild(tr);
