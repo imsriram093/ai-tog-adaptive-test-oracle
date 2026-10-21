@@ -4,9 +4,12 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+ENV/
+env/
 *.db
 *.sqlite
 *.sqlite3
+data/*.db
 all_code_for_report.txt
 build/
 dist/
@@ -15,3 +18,4 @@ Thumbs.db
 *.log
 .coverage
 htmlcov/
+node_modules/
